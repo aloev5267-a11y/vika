@@ -7,7 +7,7 @@ interface BookingSectionProps {
   isDark: boolean;
   services: { id: string; title: string; price: string; desc?: string }[];
   timeSlots: string[];
-  selectedServiceId: string;
+  selectedServiceId: string; // Оставляем для обратной совместимости, если нужно
   onServiceChange: (id: string) => void;
   onBooking: (message: string) => void;
 }
@@ -16,14 +16,15 @@ export default function BookingSection({
   isDark, 
   services, 
   timeSlots, 
-  selectedServiceId,
-  onServiceChange,
   onBooking 
 }: BookingSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState("");
   const [phone, setPhone] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Множественный выбор: храним массив ID выбранных услуг (по умолчанию выбрана первая)
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([services[0].id]);
 
   // Календарная логика: генерация первых 11 дней для быстрой сетки
   const quickDays = useMemo(() => {
@@ -48,7 +49,32 @@ export default function BookingSection({
     return daysArray;
   }, []);
 
-  const currentService = services.find(s => s.id === selectedServiceId) || services[0];
+  // Переключение выбора услуги (добавление / удаление из массива)
+  const handleServiceToggle = (id: string) => {
+    setSelectedServiceIds((prev) => {
+      if (prev.includes(id)) {
+        // Не позволяем деактивировать всё, должен остаться хотя бы один выбор
+        if (prev.length === 1) return prev;
+        return prev.filter((serviceId) => serviceId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  // Получаем массив объектов всех выбранных услуг
+  const selectedServices = useMemo(() => {
+    return services.filter((s) => selectedServiceIds.includes(s.id));
+  }, [services, selectedServiceIds]);
+
+  // Автоматический подсчет итоговой суммы сеанса
+  const totalPrice = useMemo(() => {
+    return selectedServices.reduce((sum, service) => {
+      // Извлекаем только цифры из строки цены (например, "От 1500₽" -> 1500)
+      const priceDigits = parseInt(service.price.replace(/\D/g, ""), 10) || 0;
+      return sum + priceDigits;
+    }, 0);
+  }, [selectedServices]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +84,9 @@ export default function BookingSection({
     }
     
     const formattedDate = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    const message = `✨ Услуга: *${currentService.title}*\n📅 Дата: *${formattedDate}*\n⏰ Время: *${selectedTime}*\n📱 Телефон: \`${phone}\``;
+    const zonesTitles = selectedServices.map(s => s.title).join(", ");
+    
+    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDate}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
     onBooking(message);
   };
 
@@ -75,10 +103,10 @@ export default function BookingSection({
 
       <div className={`relative p-6 md:p-10 rounded-[3rem] border backdrop-blur-xl transition-all duration-500 ${isDark ? "bg-black/40 border-white/10" : "bg-white/60 border-black/5 shadow-2xl"}`}>
         
-        {/* Новый заголовок */}
+        {/* Заголовок */}
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Запись на сеанс</h2>
-          <p className="text-sm opacity-60">Выберите удобные параметры ниже</p>
+          <p className="text-sm opacity-60">Выберите удобные параметры ниже (можно выбрать несколько зон)</p>
         </div>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -86,23 +114,24 @@ export default function BookingSection({
           {/* ЛЕВАЯ ЧАСТЬ */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Выбор зоны */}
+            {/* Выбор зоны (Множественный выбор) */}
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">1. Выберите зону</span>
+              <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">1. Выберите одну или несколько зон</span>
               <div className="flex flex-wrap gap-2">
                 {services.map((s) => {
-                  const isSelected = s.id === selectedServiceId;
+                  const isSelected = selectedServiceIds.includes(s.id);
                   return (
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => onServiceChange(s.id)}
+                      onClick={() => handleServiceToggle(s.id)}
                       className={`px-5 py-3 rounded-2xl border text-sm font-medium transition-all ${
                         isSelected 
                           ? (isDark ? "bg-pink-500/10 border-pink-400 text-pink-400 shadow-[0_0_15px_rgba(244,143,177,0.15)]" : "bg-purple-600 text-white border-purple-600")
                           : (isDark ? "bg-white/5 border-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 border-transparent text-slate-700 hover:bg-black/10")
                       }`}
                     >
+                      {isSelected && <span className="mr-1.5 font-bold">✓</span>}
                       {s.title} — {s.price}
                     </button>
                   );
@@ -110,7 +139,7 @@ export default function BookingSection({
               </div>
             </div>
 
-            {/* Компактная сетка 4 в ряд */}
+            {/* Компактная сетка дат */}
             <div>
               <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">2. Дата визита</span>
               <div className="grid grid-cols-4 gap-2">
@@ -138,7 +167,6 @@ export default function BookingSection({
                   );
                 })}
 
-                {/* 12-я ячейка: Кнопка «Показать больше» */}
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
@@ -181,32 +209,47 @@ export default function BookingSection({
 
           </div>
 
-          {/* ПРАВАЯ ЧАСТЬ: ИТОГОВАЯ КАРТОЧКА */}
+          {/* ПРАВАЯ ЧАСТЬ: ИТОГОВАЯ КАРТОЧКА С ДИНАМИЧЕСКИМ СЧЕТЧИКОМ */}
           <div className="flex flex-col justify-between">
             <div className={`p-6 rounded-3xl border flex flex-col justify-between h-full ${isDark ? "bg-white/[0.02] border-white/5" : "bg-black/[0.02] border-black/5"}`}>
               <div className="space-y-4">
                 <span className="block text-xs font-bold uppercase tracking-wider opacity-50">Ваша запись</span>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-sm opacity-70">Зона:</span>
-                    <span className="font-bold text-right">{currentService.title}</span>
+                <div className="space-y-3">
+                  
+                  {/* Вывод выбранных зон (выводит столько элементов, сколько кнопок выбрано) */}
+                  <div className="flex flex-col gap-1.5 border-b border-dashed border-white/10 pb-3">
+                    <span className="text-xs opacity-50 font-bold uppercase tracking-wide">Выбранные зоны:</span>
+                    <div className="flex flex-col gap-1">
+                      {selectedServices.map((service) => (
+                        <div key={service.id} className="flex justify-between items-center text-sm">
+                          <span className="font-semibold opacity-90">· {service.title}</span>
+                          <span className="font-mono text-xs opacity-60">{service.price}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
                   <div className="flex justify-between items-baseline">
                     <span className="text-sm opacity-70">Дата:</span>
                     <span className="font-medium text-right">
                       {selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
                     </span>
                   </div>
+                  
                   <div className="flex justify-between items-baseline">
                     <span className="text-sm opacity-70">Время:</span>
-                    <span className="font-mono font-bold text-lg text-pink-400">
+                    <span className={`font-mono font-bold text-lg ${isDark ? "text-pink-400" : "text-purple-600"}`}>
                       {selectedTime || "не выбрано"}
                     </span>
                   </div>
                 </div>
+
+                {/* Автоматический подсчет итоговой суммы сеанса */}
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
-                  <span className="text-sm font-bold">Стоимость:</span>
-                  <span className="text-xl font-mono font-bold text-pink-400">{currentService.price}</span>
+                  <span className="text-sm font-bold">Итоговая сумма:</span>
+                  <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
+                    ~ {totalPrice} ₽
+                  </span>
                 </div>
               </div>
 
@@ -216,7 +259,7 @@ export default function BookingSection({
                   <input 
                     type="tel" 
                     required 
-                    placeholder="+7 (999) 000-00-00" 
+                    placeholder="+375 ( )" 
                     value={phone} 
                     onChange={(e) => setPhone(e.target.value)} 
                     className={`w-full p-4 rounded-xl border text-sm ${
@@ -250,7 +293,6 @@ export default function BookingSection({
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Затемнение фона */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -259,7 +301,6 @@ export default function BookingSection({
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
 
-            {/* Карточка календаря */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -280,7 +321,6 @@ export default function BookingSection({
                 </button>
               </div>
 
-              {/* Скролл-контейнер со списком дней на 2 месяца. Подключен класс custom-glass-scroll */}
               <div className="max-h-[350px] overflow-y-auto pr-2 space-y-6 custom-glass-scroll">
                 <div className="grid grid-cols-4 gap-2">
                   {modalMonths.map((date, idx) => {
@@ -322,3 +362,4 @@ export default function BookingSection({
     </section>
   );
 }
+

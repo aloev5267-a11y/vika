@@ -23,8 +23,8 @@ export default function IntroLoader({ onComplete }: { onComplete: () => void }) 
     };
   }, [onComplete]);
 
-  // Разбираем слово на массив букв
-  const word = ["Н", "Е", "У", "Д", "О", "Б", "С", "Т", "В", "А"];
+  // Разбираем фразу "Забудь о слове" на массив букв для посимвольного исчезновения
+  const phrase = ["З", "а", "б", "у", "д", "ь", " ", "о", " ", "с", "л", "о", "в", "е"];
 
   return (
     <motion.div
@@ -35,24 +35,18 @@ export default function IntroLoader({ onComplete }: { onComplete: () => void }) 
     >
       <div className="text-center font-mono uppercase">
         
-        {/* Строка 1: ЗАБУДЬ О СЛОВЕ */}
-        <h2 className="text-xl sm:text-2xl md:text-4xl font-light tracking-[0.2em] mb-6 opacity-90">
-          Забудь о слове
-        </h2>
-
-        {/* Строка 2: НЕУДОБСТВА */}
-        <div className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-[0.1em] flex justify-center gap-[0.15em]">
-          {word.map((letter, index) => {
-            // Расчет задержки для исчезновения справа налево (с конца слова):
-            const delay = 0.4 + (word.length - 1 - index) * 0.1;
+        {/* Строка 1: ЗАБУДЬ О СЛОВЕ (Теперь исчезает по буквам справа налево) */}
+        <h2 className="text-xl sm:text-2xl md:text-4xl font-light tracking-[0.2em] mb-6 opacity-90 flex justify-center whitespace-pre">
+          {phrase.map((letter, index) => {
+            // Точный расчет задержки для исчезновения справа налево:
+            const delay = 0.4 + (phrase.length - 1 - index) * 0.08;
 
             return (
               <motion.span
                 key={index}
-                // ИСПРАВЛЕНО: перенесли display="inline-block" в Tailwind CSS класс className
                 className="inline-block"
                 initial={{ opacity: 1, scale: 1 }}
-                animate={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 0, scale: 0.95 }}
                 transition={{
                   delay: delay,
                   duration: 0.25,
@@ -63,9 +57,15 @@ export default function IntroLoader({ onComplete }: { onComplete: () => void }) 
               </motion.span>
             );
           })}
+        </h2>
+
+        {/* Строка 2: НЕУДОБСТВА (Остается гореть на экране) */}
+        <div className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-[0.1em] flex justify-center gap-[0.15em]">
+          <span>НЕУДОБСТВА</span>
         </div>
 
       </div>
     </motion.div>
   );
 }
+
