@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-pink: #ff00ff;
+  --color-brand-purple: #9d00ff;
+  --color-skin-light: #fdf5f2;
+  --color-skin-dark: #121212;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased selection:bg-brand-pink/30;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-md border border-white/20 bg-white/10;
+  }
+  .glass-dark {
+    @apply backdrop-blur-md border border-white/10 bg-black/30;
+  }
+  .text-glow-pink {
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3);
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 10px rgba(157, 0, 255, 0.5), 0 0 20px rgba(157, 0, 255, 0.3);
+  }
+
+  /* НОВОЕ: Эффект Liquid Glass для скроллбара */
+  .custom-glass-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-glass-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-glass-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(4px);
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .custom-glass-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
