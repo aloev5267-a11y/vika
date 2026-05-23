@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import IntroLoader from "./components/IntroLoader";
 import BookingSection from "./components/BookingSection";
@@ -10,13 +10,6 @@ const TELEGRAM_BOT_TOKEN = "8969405850:AAE_JwZRNzELEb17kYG1ZVeoHCgzvNbZwNQ";
 const TELEGRAM_CHAT_ID = "8163122101"; 
 
 // --- ИКОНКИ ---
-const IconSparkle = ({ className }: { className?: string }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <path d="M12 3V5M12 19V21M5 12H3M21 12H19M18.36 5.64L16.95 7.05M7.05 16.95L5.64 18.36M18.36 18.36L16.95 16.95M7.05 7.05L5.64 5.64" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
-  </svg>
-);
-
 const IconMoon = ({ className }: { className?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -120,12 +113,31 @@ export default function App() {
   const [isDark, setIsDark] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationText, setNotificationText] = useState("");
-  // Состояние для выбранной услуги (чтобы передавать в BookingSection)
   const [activeServiceId, setActiveServiceId] = useState(services[0].id);
+
+  // Состояние прогресса прокрутки (от 0 до 100)
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Параметры SVG-окружности для индикатора (r = 13)
+  const radius = 13;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll > 0) {
+        const currentProgress = (window.scrollY / totalScroll) * 100;
+        setScrollProgress(currentProgress);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const toggleTheme = () => setIsDark(!isDark);
 
-  // Функция красивой плавной прокрутки
   const scrollToBooking = (serviceId?: string) => {
     if (serviceId) {
       setActiveServiceId(serviceId);
@@ -167,17 +179,54 @@ export default function App() {
           <div className={`absolute -top-20 -right-40 w-[650px] h-[650px] rounded-full blur-[160px] opacity-25 transition-colors duration-1000 ${isDark ? "bg-pink-500" : "bg-purple-400"}`} />
         </div>
 
-        {/* ШАПКА */}
-        <header className="fixed top-0 w-full z-50 p-6 flex justify-between items-center max-w-[1440px] mx-auto left-1/2 -translate-x-1/2">
-          <div className="flex items-center gap-2">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-500 ${isDark ? "border-pink-400 bg-black/40" : "border-slate-300 bg-white/40"} backdrop-blur-md`}>
-              <IconSparkle className={`w-5 h-5 ${isDark ? "text-pink-400" : "text-slate-700"}`} />
+        {/* ШАПКА В ВИДЕ ПАРЯЩЕЙ КАРТОЧКИ */}
+        <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-auto min-w-[200px] max-w-[90%]">
+          <div className={`px-5 py-2.5 rounded-full border flex items-center justify-between gap-10 transition-all duration-1000 backdrop-blur-md shadow-lg ${
+            isDark 
+              ? "bg-white/5 border-white/10 shadow-black/40" 
+              : "bg-white/40 border-black/5 shadow-slate-200/50"
+          }`}>
+            
+            {/* КРУГ-ПРОГРЕСС С КРАСНЫМ ЗАПОЛНЕНИЕМ */}
+            <div className="flex items-center justify-center relative w-9 h-9">
+              <svg className="-rotate-90 w-full h-full" viewBox="0 0 32 32">
+                {/* Полупрозрачная подложка круга */}
+                <circle
+                  cx="16"
+                  cy="16"
+                  r={radius}
+                  className={isDark ? "stroke-white/10" : "stroke-black/5"}
+                  strokeWidth="2.5"
+                  fill="transparent"
+                />
+                {/* Активный круг, заполняющийся ярко-красным (алыми) цветом */}
+                <motion.circle
+                  cx="16"
+                  cy="16"
+                  r={radius}
+                  className="stroke-red-500"
+                  strokeWidth="2.5"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  animate={{ strokeDashoffset }}
+                  transition={{ ease: "easeOut", duration: 0.1 }}
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
-            <span className="font-bold text-xl tracking-tight">ELECTRO<span className={isDark ? "text-pink-400" : "text-purple-500"}>EPIL</span></span>
+
+            {/* КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ */}
+            <button 
+              onClick={toggleTheme} 
+              className={`p-2 rounded-full border transition-all duration-500 hover:scale-105 active:scale-95 ${
+                isDark 
+                  ? "border-white/10 bg-white/5 hover:bg-white/10" 
+                  : "border-black/5 bg-black/5 hover:bg-black/10"
+              }`}
+            >
+              {isDark ? <IconSun className="text-yellow-400 w-4 h-4" /> : <IconMoon className="text-slate-700 w-4 h-4" />}
+            </button>
           </div>
-          <button onClick={toggleTheme} className={`p-3 rounded-full border transition-all duration-500 ${isDark ? "border-white/20 bg-white/10" : "border-black/10 bg-black/5"} backdrop-blur-sm z-50`}>
-            {isDark ? <IconSun className="text-yellow-400" /> : <IconMoon className="text-slate-700" />}
-          </button>
         </header>
 
         {/* КОНТЕНТ */}
@@ -233,7 +282,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* БЛОК БРОНИРОВАНИЯ (Добавлен id для скролла и контролируемый выбор услуги) */}
+          {/* БЛОК БРОНИРОВАНИЯ */}
           <div id="booking-section" className="scroll-mt-24">
             <BookingSection 
               isDark={isDark} 
@@ -271,3 +320,4 @@ export default function App() {
     </>
   );
 }
+
