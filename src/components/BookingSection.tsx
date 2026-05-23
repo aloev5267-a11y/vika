@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface BookingSectionProps {
   isDark: boolean;
   services: { id: string; title: string; price: string; desc?: string }[];
   timeSlots: string[];
-  selectedServiceId: string; // Оставляем для обратной совместимости, если нужно
+  selectedServiceId: string; // Оставляем для обратной совместимости
   onServiceChange: (id: string) => void;
   onBooking: (message: string) => void;
 }
@@ -15,7 +15,6 @@ interface BookingSectionProps {
 export default function BookingSection({ 
   isDark, 
   services, 
-  timeSlots, 
   onBooking 
 }: BookingSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -25,6 +24,60 @@ export default function BookingSection({
 
   // Множественный выбор: храним массив ID выбранных услуг (по умолчанию выбрана первая)
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([services[0].id]);
+
+  // Состояние для хранения реальных данных о бронированиях из PostgreSQL
+  const [dbData, setDbData] = useState<{ fullyBookedDates: string[]; bookedSlotsByDate: Record<string, string[]> }>({
+    fullyBookedDates: [],
+    bookedSlotsByDate: {}
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Вспомогательная функция перевода даты в строку YYYY-MM-DD с учетом локальной временной зоны
+  const formatDateISO = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Функция для загрузки актуального расписания из БД
+  const fetchSlots = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/booked-slots');
+      if (res.ok) {
+        const data = await res.json();
+        setDbData(data);
+      }
+    } catch (err) {
+      console.error("Не удалось загрузить слоты из базы данных:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Подгружаем занятые места при первой загрузке страницы
+  useEffect(() => {
+    fetchSlots();
+  }, []);
+
+  // Получаем массив занятых часов именно для выбранного дня
+  const activeBookedSlots = useMemo(() => {
+    const dateStr = formatDateISO(selectedDate);
+    return dbData.bookedSlotsByDate[dateStr] || [];
+  }, [selectedDate, dbData]);
+
+  // Генерируем полный список стандартных часов сеанса (от 10:00 до 20:00)
+  const allTimeSlots = useMemo(() => {
+    return ['10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+  }, []);
+
+  // Сбрасываем выбранное время, если оно оказалось занято при переключении даты
+  useEffect(() => {
+    if (selectedTime && activeBookedSlots.includes(selectedTime)) {
+      setSelectedTime("");
+    }
+  }, [selectedDate, activeBookedSlots]);
 
   // Календарная логика: генерация первых 11 дней для быстрой сетки
   const quickDays = useMemo(() => {
@@ -53,7 +106,6 @@ export default function BookingSection({
   const handleServiceToggle = (id: string) => {
     setSelectedServiceIds((prev) => {
       if (prev.includes(id)) {
-        // Не позволяем деактивировать всё, должен остаться хотя бы один выбор
         if (prev.length === 1) return prev;
         return prev.filter((serviceId) => serviceId !== id);
       } else {
@@ -70,24 +122,54 @@ export default function BookingSection({
   // Автоматический подсчет итоговой суммы сеанса
   const totalPrice = useMemo(() => {
     return selectedServices.reduce((sum, service) => {
-      // Извлекаем только цифры из строки цены (например, "От 1500₽" -> 1500)
       const priceDigits = parseInt(service.price.replace(/\D/g, ""), 10) || 0;
       return sum + priceDigits;
     }, 0);
   }, [selectedServices]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Отправка формы бронирования в БД и Telegram
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTime) {
       alert("Пожалуйста, выберите время для записи.");
       return;
     }
     
-    const formattedDate = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const formattedDateISO = formatDateISO(selectedDate);
     const zonesTitles = selectedServices.map(s => s.title).join(", ");
     
-    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDate}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
-    onBooking(message);
+    try {
+      // 1. Сначала сохраняем запись в PostgreSQL
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: selectedServiceIds.join(', '), // передаем строку со всеми выбранными ID
+          bookingDate: formattedDateISO,
+          bookingTime: selectedTime,
+          phone: phone
+        })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        // 2. Если запись прошла успешно, отправляем сообщение в Телеграм
+        const formattedDateText = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+        const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
+        onBooking(message);
+
+        // 3. Обновляем карту занятых слотов с сервера
+        await fetchSlots();
+        alert("Вы успешно записаны на сеанс!");
+      } else {
+        // Ошибка наложения записей или иная валидация
+        alert(result.error || "Не удалось записаться. Возможно, это время уже заняли.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети при попытке забронировать время.");
+    }
   };
 
   // Проверка, совпадает ли дата из списка с выбранной
@@ -114,7 +196,7 @@ export default function BookingSection({
           {/* ЛЕВАЯ ЧАСТЬ */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Выбор зоны (Множественный выбор) */}
+            {/* Выбор зоны */}
             <div>
               <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">1. Выберите одну или несколько зон</span>
               <div className="flex flex-wrap gap-2">
@@ -139,12 +221,16 @@ export default function BookingSection({
               </div>
             </div>
 
-            {/* Компактная сетка дат */}
+            {/* Сетка дат */}
             <div>
               <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">2. Дата визита</span>
               <div className="grid grid-cols-4 gap-2">
                 {quickDays.map((date, idx) => {
                   const isSelected = isSameDay(selectedDate, date);
+                  const dateISO = formatDateISO(date);
+                  // Проверяем, забит ли день в БД целиком
+                  const isFullyBooked = dbData.fullyBookedDates.includes(dateISO);
+
                   const label = idx === 0 ? "Сегодня" : idx === 1 ? "Завтра" : date.toLocaleDateString("ru-RU", { day: "numeric" });
                   const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" });
                   const month = date.toLocaleDateString("ru-RU", { month: "short" });
@@ -153,11 +239,14 @@ export default function BookingSection({
                     <button
                       key={idx}
                       type="button"
+                      disabled={isFullyBooked}
                       onClick={() => setSelectedDate(date)}
                       className={`h-20 rounded-2xl border flex flex-col items-center justify-center transition-all ${
-                        isSelected 
-                          ? (isDark ? "bg-pink-400 text-black border-pink-400 font-bold" : "bg-slate-900 text-white border-slate-900 font-bold") 
-                          : (isDark ? "bg-white/5 border-white/5 text-white/60 hover:bg-white/10" : "bg-black/5 border-transparent text-slate-700 hover:bg-black/10")
+                        isFullyBooked
+                          ? "opacity-30 bg-red-500/5 border-transparent text-gray-500 line-through cursor-not-allowed"
+                          : isSelected 
+                            ? (isDark ? "bg-pink-400 text-black border-pink-400 font-bold" : "bg-slate-900 text-white border-slate-900 font-bold") 
+                            : (isDark ? "bg-white/5 border-white/5 text-white/60 hover:bg-white/10" : "bg-black/5 border-transparent text-slate-700 hover:bg-black/10")
                       }`}
                     >
                       <span className="text-[9px] uppercase opacity-60 font-medium mb-0.5">{weekday}</span>
@@ -183,21 +272,29 @@ export default function BookingSection({
 
             {/* Доступное время */}
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">3. Доступное время</span>
+              <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">
+                3. Доступное время {isLoading && <span className="text-[10px] lowercase opacity-50 ml-2">(обновление...)</span>}
+              </span>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {timeSlots.map((time) => {
+                {allTimeSlots.map((time) => {
                   const isSelected = selectedTime === time;
+                  // Проверяем, забит ли конкретный час в PostgreSQL для этой даты
+                  const isTimeTaken = activeBookedSlots.includes(time);
+
                   return (
                     <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={isTimeTaken ? {} : { scale: 1.03 }}
+                      whileTap={isTimeTaken ? {} : { scale: 0.98 }}
                       key={time}
                       type="button"
+                      disabled={isTimeTaken}
                       onClick={() => setSelectedTime(time)}
                       className={`py-3.5 rounded-xl border text-center font-mono text-sm font-semibold transition-all ${
-                        isSelected
-                          ? (isDark ? "bg-pink-400 text-black border-pink-400" : "bg-slate-900 text-white border-slate-900")
-                          : (isDark ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-black/10 text-slate-800 hover:bg-black/5")
+                        isTimeTaken
+                          ? "opacity-25 bg-red-500/10 border-transparent text-gray-500 line-through cursor-not-allowed"
+                          : isSelected
+                            ? (isDark ? "bg-pink-400 text-black border-pink-400" : "bg-slate-900 text-white border-slate-900")
+                            : (isDark ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-black/10 text-slate-800 hover:bg-black/5")
                       }`}
                     >
                       {time}
@@ -209,14 +306,13 @@ export default function BookingSection({
 
           </div>
 
-          {/* ПРАВАЯ ЧАСТЬ: ИТОГОВАЯ КАРТОЧКА С ДИНАМИЧЕСКИМ СЧЕТЧИКОМ */}
+          {/* ПРАВАЯ ЧАСТЬ: ИТОГОВАЯ КАРТОЧКА */}
           <div className="flex flex-col justify-between">
             <div className={`p-6 rounded-3xl border flex flex-col justify-between h-full ${isDark ? "bg-white/[0.02] border-white/5" : "bg-black/[0.02] border-black/5"}`}>
               <div className="space-y-4">
                 <span className="block text-xs font-bold uppercase tracking-wider opacity-50">Ваша запись</span>
                 <div className="space-y-3">
                   
-                  {/* Вывод выбранных зон (выводит столько элементов, сколько кнопок выбрано) */}
                   <div className="flex flex-col gap-1.5 border-b border-dashed border-white/10 pb-3">
                     <span className="text-xs opacity-50 font-bold uppercase tracking-wide">Выбранные зоны:</span>
                     <div className="flex flex-col gap-1">
@@ -244,7 +340,6 @@ export default function BookingSection({
                   </div>
                 </div>
 
-                {/* Автоматический подсчет итоговой суммы сеанса */}
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
                   <span className="text-sm font-bold">Итоговая сумма:</span>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
@@ -325,6 +420,9 @@ export default function BookingSection({
                 <div className="grid grid-cols-4 gap-2">
                   {modalMonths.map((date, idx) => {
                     const isSelected = isSameDay(selectedDate, date);
+                    const dateISO = formatDateISO(date);
+                    const isFullyBooked = dbData.fullyBookedDates.includes(dateISO);
+
                     const label = date.getDate();
                     const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" });
                     const month = date.toLocaleDateString("ru-RU", { month: "short" });
@@ -333,14 +431,17 @@ export default function BookingSection({
                       <button
                         key={idx}
                         type="button"
+                        disabled={isFullyBooked}
                         onClick={() => {
                           setSelectedDate(date);
                           setIsModalOpen(false);
                         }}
                         className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${
-                          isSelected 
-                            ? (isDark ? "bg-pink-400 text-black font-bold shadow-[0_0_15px_rgba(244,143,177,0.4)]" : "bg-slate-900 text-white font-bold") 
-                            : (isDark ? "bg-white/5 hover:bg-pink-500/20 hover:text-pink-300 text-white/90" : "bg-black/5 hover:bg-purple-600/10 text-slate-800")
+                          isFullyBooked
+                            ? "opacity-30 bg-red-500/5 border-transparent text-gray-500 line-through cursor-not-allowed"
+                            : isSelected 
+                              ? (isDark ? "bg-pink-400 text-black font-bold shadow-[0_0_15px_rgba(244,143,177,0.4)]" : "bg-slate-900 text-white font-bold") 
+                              : (isDark ? "bg-white/5 hover:bg-pink-500/20 hover:text-pink-300 text-white/90" : "bg-black/5 hover:bg-purple-600/10 text-slate-800")
                         }`}
                       >
                         <span className="text-[8px] uppercase opacity-50">{weekday}</span>
@@ -362,4 +463,3 @@ export default function BookingSection({
     </section>
   );
 }
-
