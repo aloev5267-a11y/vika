@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import multer from 'multer';
 import { dispatchApi, ApiError, isAuthed } from './api-server';
+import { optimizeUpload } from './optimize-upload';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,12 +43,13 @@ app.post('/api/admin/upload', (req, res) => {
     res.status(401).json({ error: 'Требуется авторизация' });
     return;
   }
-  upload.single('file')(req, res, (err) => {
+  upload.single('file')(req, res, async (err) => {
     if (err || !req.file) {
       res.status(400).json({ error: 'Не удалось загрузить файл' });
       return;
     }
-    res.json({ url: `/uploads/${req.file.filename}` });
+    const optimized = await optimizeUpload(uploadsDir, req.file.filename);
+    res.json({ url: `/uploads/${optimized}` });
   });
 });
 

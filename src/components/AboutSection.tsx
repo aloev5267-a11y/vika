@@ -37,6 +37,8 @@ export default function AboutSection({ isDark, settings }: AboutSectionProps) {
                 src={settings.master_photo || '/placeholder.svg'}
                 alt={settings.master_name}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-3 opacity-40">

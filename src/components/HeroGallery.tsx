@@ -73,6 +73,8 @@ export default function HeroGallery({ items, isDark }: Props) {
                 alt={item.title || 'Результат'}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 crossOrigin="anonymous"
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
               <span className="absolute inset-x-0 bottom-0 px-1.5 py-1.5 text-[10px] font-semibold text-white leading-tight text-center truncate">

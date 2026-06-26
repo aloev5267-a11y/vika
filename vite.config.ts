@@ -5,6 +5,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import multer from 'multer';
 import { dispatchApi, ApiError, isAuthed } from './api-server.ts';
+import { optimizeUpload } from './optimize-upload.ts';
 
 const uploadsDir = path.resolve(__dirname, 'uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -55,10 +56,11 @@ export default defineConfig(() => {
             // Загрузка изображения
             if (pathname === '/api/admin/upload' && req.method === 'POST') {
               if (!isAuthed(getToken(req as any))) return send(401, { error: 'Требуется авторизация' });
-              upload.single('file')(req as any, res as any, (err: unknown) => {
+              upload.single('file')(req as any, res as any, async (err: unknown) => {
                 const file = (req as any).file;
                 if (err || !file) return send(400, { error: 'Не удалось загрузить файл' });
-                send(200, { url: `/uploads/${file.filename}` });
+                const optimized = await optimizeUpload(uploadsDir, file.filename);
+                send(200, { url: `/uploads/${optimized}` });
               });
               return;
             }

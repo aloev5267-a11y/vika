@@ -52,7 +52,7 @@ export default function BeforeAfterSlider({ imageBefore, imageAfter, alt = 'Ре
       onPointerLeave={onPointerUp}
     >
       {/* Слой "До" (низ) */}
-      <img src={imageBefore || '/placeholder.svg'} alt={`${alt} — до`} className="absolute inset-0 w-full h-full object-cover" draggable={false} crossOrigin="anonymous" />
+      <img src={imageBefore || '/placeholder.svg'} alt={`${alt} — до`} className="absolute inset-0 w-full h-full object-cover" draggable={false} crossOrigin="anonymous" decoding="async" />
       {/* Метка "До" */}
       <span className="absolute bottom-3 right-3 text-[11px] font-semibold px-2 py-1 rounded-full bg-black/60 text-white backdrop-blur-sm">До</span>
 
@@ -65,6 +65,7 @@ export default function BeforeAfterSlider({ imageBefore, imageAfter, alt = 'Ре
           style={{ width: containerRef.current ? `${containerRef.current.clientWidth}px` : '100%' }}
           draggable={false}
           crossOrigin="anonymous"
+          decoding="async"
         />
         <span className="absolute bottom-3 left-3 text-[11px] font-semibold px-2 py-1 rounded-full bg-pink-400 text-black">После</span>
       </div>

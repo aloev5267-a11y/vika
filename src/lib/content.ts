@@ -47,12 +47,12 @@ export const DEFAULT_CONTENT: SiteContent = {
     { author: 'Елена В.', text: 'Лазер не помогал, а электроэпиляция справилась на 100%.' },
   ],
   beforeAfter: [
-    { id: 1, title: 'Ноги полностью', imageBefore: '/placeholders/legs-before.png', imageAfter: '/placeholders/legs-after.png' },
-    { id: 2, title: 'Руки', imageBefore: '/placeholders/arm-before.png', imageAfter: '/placeholders/arm-after.png' },
-    { id: 3, title: 'Колени', imageBefore: '/placeholders/knee-before.png', imageAfter: '/placeholders/knee-after.png' },
-    { id: 4, title: 'Плечи', imageBefore: '/placeholders/shoulder-before.png', imageAfter: '/placeholders/shoulder-after.png' },
-    { id: 5, title: 'Подмышки', imageBefore: '/placeholders/underarm-before.png', imageAfter: '/placeholders/underarm-after.png' },
-    { id: 6, title: 'Спина', imageBefore: '/placeholders/back-before.png', imageAfter: '/placeholders/back-after.png' },
+    { id: 1, title: 'Ноги полностью', imageBefore: '/placeholders/legs-before.webp', imageAfter: '/placeholders/legs-after.webp' },
+    { id: 2, title: 'Руки', imageBefore: '/placeholders/arm-before.webp', imageAfter: '/placeholders/arm-after.webp' },
+    { id: 3, title: 'Колени', imageBefore: '/placeholders/knee-before.webp', imageAfter: '/placeholders/knee-after.webp' },
+    { id: 4, title: 'Плечи', imageBefore: '/placeholders/shoulder-before.webp', imageAfter: '/placeholders/shoulder-after.webp' },
+    { id: 5, title: 'Подмышки', imageBefore: '/placeholders/underarm-before.webp', imageAfter: '/placeholders/underarm-after.webp' },
+    { id: 6, title: 'Спина', imageBefore: '/placeholders/back-before.webp', imageAfter: '/placeholders/back-after.webp' },
   ],
   advantages: [
     { icon: 'infinity', title: 'Навсегда', description: 'Электроэпиляция — единственный метод удаления волос навсегда.' },
