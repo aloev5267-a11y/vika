@@ -6,8 +6,7 @@ import Hero from "./components/Hero";
 import BookingSection from "./components/BookingSection";
 import ServicesSection from "./components/ServicesSection";
 import AboutSection from "./components/AboutSection";
-import ProcessSection from "./components/ProcessSection";
-import AdvantagesSection from "./components/AdvantagesSection";
+import ExperienceSection from "./components/ExperienceSection";
 import GallerySection from "./components/GallerySection";
 import FaqSection from "./components/FaqSection";
 import TestimonialsSection from "./components/TestimonialsSection";
@@ -97,9 +96,7 @@ function LandingPage() {
           {/* УСЛУГИ */}
           <ServicesSection isDark={isDark} services={services} scrollToBooking={scrollToBooking} />
 
-          <AdvantagesSection isDark={isDark} advantages={content.advantages} />
-
-          <ProcessSection isDark={isDark} />
+          <ExperienceSection isDark={isDark} advantages={content.advantages} />
 
           {/* БРОНИРОВАНИЕ */}
           <div id="booking-section" className="scroll-mt-24">
