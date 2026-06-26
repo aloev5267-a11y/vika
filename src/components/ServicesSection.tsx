@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Service } from '../lib/data';
-import { IconArrowRight, IconSparkles, IconInfinity, IconShield, IconHeart } from './icons';
+import { IconArrowRight, IconFace, IconBody, IconBikini, IconLegs } from './icons';
 
 interface Props {
   isDark: boolean;
@@ -11,16 +11,16 @@ interface Props {
 
 // Иконка для каждой зоны по её id (с запасным вариантом).
 const serviceIcons: Record<string, (p: { className?: string }) => React.ReactElement> = {
-  face: IconSparkles,
-  body: IconInfinity,
-  bikini: IconHeart,
-  legs: IconShield,
+  face: IconFace,
+  body: IconBody,
+  bikini: IconBikini,
+  legs: IconLegs,
 };
 
 export default function ServicesSection({ isDark, services, scrollToBooking }: Props) {
   const [activeId, setActiveId] = useState(services[0]?.id);
   const active = services.find((s) => s.id === activeId) ?? services[0];
-  const ActiveIcon = serviceIcons[active.id] ?? IconSparkles;
+  const ActiveIcon = serviceIcons[active.id] ?? IconFace;
 
   const accent = isDark ? 'text-pink-400' : 'text-purple-600';
 
@@ -41,7 +41,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
           className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1 snap-x scrollbar-none"
         >
           {services.map((s) => {
-            const Icon = serviceIcons[s.id] ?? IconSparkles;
+            const Icon = serviceIcons[s.id] ?? IconFace;
             const isActive = s.id === active.id;
             return (
               <button

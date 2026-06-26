@@ -48,8 +48,8 @@ export default function HeroGallery({ items, isDark }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* ГОРИЗОНТАЛЬНАЯ ЛЕНТА ПРЕВЬЮ */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {/* СИММЕТРИЧНАЯ СЕТКА ПРЕВЬЮ */}
+      <div className="grid grid-cols-3 gap-2">
         {visible.map((item, idx) => {
           const isActive = idx === active;
           return (
@@ -58,14 +58,14 @@ export default function HeroGallery({ items, isDark }: Props) {
               onClick={() => setActive(idx)}
               aria-label={`Показать: ${item.title || 'результат'}`}
               aria-pressed={isActive}
-              className={`group relative shrink-0 snap-start w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden border-2 transition-all ${
+              className={`group relative aspect-square rounded-2xl overflow-hidden transition-all duration-300 ring-2 ${
                 isActive
                   ? isDark
-                    ? 'border-pink-400 shadow-[0_0_14px_rgba(244,143,177,0.4)]'
-                    : 'border-purple-600 shadow-lg'
+                    ? 'ring-pink-400 shadow-[0_0_16px_rgba(244,143,177,0.45)]'
+                    : 'ring-purple-600 shadow-lg'
                   : isDark
-                  ? 'border-white/10 opacity-60 hover:opacity-100'
-                  : 'border-black/10 opacity-70 hover:opacity-100'
+                  ? 'ring-white/10 opacity-55 hover:opacity-100'
+                  : 'ring-black/10 opacity-70 hover:opacity-100'
               }`}
             >
               <img
@@ -74,8 +74,8 @@ export default function HeroGallery({ items, isDark }: Props) {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 crossOrigin="anonymous"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-              <span className="absolute inset-x-0 bottom-0 p-1.5 text-[10px] font-semibold text-white leading-tight text-left line-clamp-2">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+              <span className="absolute inset-x-0 bottom-0 px-1.5 py-1.5 text-[10px] font-semibold text-white leading-tight text-center truncate">
                 {item.title}
               </span>
             </button>

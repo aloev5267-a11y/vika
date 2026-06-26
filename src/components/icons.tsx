@@ -60,6 +60,36 @@ export const IconInstagram = ({ className }: IconProps) => (
   </svg>
 );
 
+// Кастомные иконки зон услуг — аккуратные, симметричные, single-line.
+export const IconFace = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <circle cx="12" cy="9" r="4" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+export const IconBody = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <circle cx="12" cy="4.4" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M12 7v7M6.5 9.5h11M12 14l-3 6M12 14l3 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const IconBikini = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    {[0, 72, 144, 216, 288].map((a) => (
+      <ellipse key={a} cx="12" cy="7.6" rx="2.1" ry="3.3" transform={`rotate(${a} 12 12)`} stroke="currentColor" strokeWidth="1.4" />
+    ))}
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+);
+
+export const IconLegs = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <path d="M8.5 4h7M10 4l-1.4 16M14 4l1.4 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // Иконки для преимуществ / процедуры
 export const IconInfinity = ({ className }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
