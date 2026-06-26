@@ -34,11 +34,11 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
-        {/* СЕЛЕКТОР ЗОН: на мобильном — горизонтальная лента, на десктопе — вертикальный список */}
+        {/* СЕЛЕКТОР ЗОН: на мобильном — сетка 2×2, на десктопе — вертикальный список */}
         <div
           role="tablist"
           aria-label="Зоны услуг"
-          className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1 snap-x scrollbar-none"
+          className="grid grid-cols-2 lg:flex lg:flex-col gap-2"
         >
           {services.map((s) => {
             const Icon = serviceIcons[s.id] ?? IconFace;
@@ -49,7 +49,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveId(s.id)}
-                className={`group flex items-center gap-3 shrink-0 snap-start rounded-2xl border px-4 py-3.5 text-left transition-all lg:w-full ${
+                className={`group flex items-center gap-3 w-full rounded-2xl border px-4 py-3.5 text-left transition-all ${
                   isActive
                     ? isDark
                       ? 'bg-pink-500/10 border-pink-400/60 shadow-[0_0_20px_rgba(244,143,177,0.12)]'
@@ -72,8 +72,8 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 >
                   <Icon className="w-5 h-5" />
                 </span>
-                <span className="flex flex-col">
-                  <span className="font-semibold text-sm whitespace-nowrap">{s.title}</span>
+                <span className="flex flex-col min-w-0">
+                  <span className="font-semibold text-sm truncate">{s.title}</span>
                   <span className={`text-xs ${isActive ? 'opacity-80' : 'opacity-50'}`}>{s.price}</span>
                 </span>
               </button>
