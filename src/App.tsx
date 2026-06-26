@@ -14,7 +14,8 @@ import TestimonialsSection from "./components/TestimonialsSection";
 import ContactSection from "./components/ContactSection";
 import AdminPage from "./admin/AdminPage";
 import { services, timeSlots } from "./lib/data";
-import { useContent } from "./lib/content";
+import { useContent, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "./lib/content";
+import { IconInstagram } from "./components/icons";
 
 type Notification = { text: string; type: "success" | "error" };
 
@@ -124,9 +125,17 @@ function LandingPage() {
         </main>
 
         {/* ФУТЕР */}
-        <footer className={`relative z-10 border-t py-8 px-6 text-center text-sm ${isDark ? "border-white/10 text-white/50" : "border-black/5 text-slate-500"}`}>
+        <footer className={`relative z-10 border-t py-8 px-6 flex flex-col items-center gap-3 text-center text-sm ${isDark ? "border-white/10 text-white/50" : "border-black/5 text-slate-500"}`}>
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center gap-2 font-medium transition-opacity hover:opacity-80 ${isDark ? "text-pink-400" : "text-purple-600"}`}
+          >
+            <IconInstagram className="w-4 h-4" />
+            @{INSTAGRAM_HANDLE}
+          </a>
           <p>© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · Все зоны 40 BYN</p>
-          <a href="/admin" className="inline-block mt-2 opacity-60 hover:opacity-100 transition-opacity">Вход для администратора</a>
         </footer>
 
         {/* УВЕДОМЛЕНИЯ */}

@@ -96,3 +96,7 @@ export function useContent() {
 export function phoneDigits(phone: string): string {
   return phone.replace(/\D/g, '');
 }
+
+/** Instagram-аккаунт студии (используется в шапке, контактах и футере). */
+export const INSTAGRAM_HANDLE = 'electroepil_victoria';
+export const INSTAGRAM_URL = `https://instagram.com/${INSTAGRAM_HANDLE}`;

@@ -7,8 +7,9 @@ import {
   IconTelegram,
   IconWhatsApp,
   IconViber,
+  IconInstagram,
 } from './icons';
-import { phoneDigits } from '../lib/content';
+import { phoneDigits, INSTAGRAM_URL } from '../lib/content';
 
 const navLinks = [
   { id: 'services-section', label: 'Услуги' },
@@ -41,6 +42,7 @@ export default function Header({ isDark, toggleTheme, scrollProgress, scrollToSe
     { label: 'Telegram', href: `https://t.me/+${digits}`, Icon: IconTelegram, color: 'hover:text-sky-400' },
     { label: 'WhatsApp', href: `https://wa.me/${digits}`, Icon: IconWhatsApp, color: 'hover:text-green-500' },
     { label: 'Viber', href: `viber://chat?number=%2B${digits}`, Icon: IconViber, color: 'hover:text-purple-500' },
+    { label: 'Instagram', href: INSTAGRAM_URL, Icon: IconInstagram, color: 'hover:text-pink-500' },
   ];
 
   // Кнопка переключения темы с прогресс-кольцом прокрутки вокруг неё.

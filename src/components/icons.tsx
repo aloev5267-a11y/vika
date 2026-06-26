@@ -51,6 +51,15 @@ export const IconViber = ({ className }: IconProps) => (
   </svg>
 );
 
+// Instagram
+export const IconInstagram = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="12" cy="12" r="4.3" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" />
+  </svg>
+);
+
 // Иконки для преимуществ / процедуры
 export const IconInfinity = ({ className }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">

@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import type { SiteSettings } from '../lib/content';
-import { phoneDigits } from '../lib/content';
-import { IconMapPin, IconTelegram, IconWhatsApp, IconViber, IconPhone } from './icons';
+import { phoneDigits, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/content';
+import { IconMapPin, IconTelegram, IconWhatsApp, IconViber, IconPhone, IconInstagram } from './icons';
 
 interface ContactSectionProps {
   isDark: boolean;
@@ -83,7 +83,26 @@ export default function ContactSection({ isDark, settings }: ContactSectionProps
               >
                 <IconViber className="w-6 h-6" />
               </a>
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-white transition-transform hover:scale-105"
+                style={{ background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)' }}
+              >
+                <IconInstagram className="w-6 h-6" />
+              </a>
             </div>
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-2 mt-4 text-sm font-medium transition-opacity hover:opacity-80 ${isDark ? 'text-pink-400' : 'text-purple-600'}`}
+            >
+              <IconInstagram className="w-4 h-4" />
+              @{INSTAGRAM_HANDLE}
+            </a>
           </div>
         </motion.div>
 
