@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
+// Фиксированная стоимость одного сеанса (оплата за час работы, а не за зону).
+const SESSION_PRICE = 40;
+
 interface BookingSectionProps {
   isDark: boolean;
   services: { id: string; title: string; price: string; desc?: string }[];
@@ -117,13 +120,8 @@ export default function BookingSection({
     return services.filter((s) => selectedServiceIds.includes(s.id));
   }, [services, selectedServiceIds]);
 
-  // Автоматический подсчет итоговой суммы сеанса
-  const totalPrice = useMemo(() => {
-    return selectedServices.reduce((sum, service) => {
-      const priceDigits = parseInt(service.price.replace(/\D/g, ""), 10) || 0;
-      return sum + priceDigits;
-    }, 0);
-  }, [selectedServices]);
+  // Цена фиксированная — клиент платит за час работы (сеанс), а не за каждую зону.
+  const totalPrice = SESSION_PRICE;
 
   // Отправка формы бронирования. Telegram-уведомление отправляет сервер.
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,7 +323,6 @@ export default function BookingSection({
                       {selectedServices.map((service) => (
                         <div key={service.id} className="flex justify-between items-center text-sm">
                           <span className="font-semibold opacity-90">· {service.title}</span>
-                          <span className="font-mono text-xs opacity-60">{service.price}</span>
                         </div>
                       ))}
                     </div>
@@ -347,7 +344,10 @@ export default function BookingSection({
                 </div>
 
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
-                  <span className="text-sm font-bold">Итоговая сумма:</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold">Итоговая сумма:</span>
+                    <span className="text-[11px] opacity-50">за сеанс (1 час), независимо от числа зон</span>
+                  </div>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
                     {totalPrice} BYN
                   </span>
