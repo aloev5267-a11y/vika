@@ -7,13 +7,15 @@ import GalleryManager from './GalleryManager';
 import TestimonialsManager from './TestimonialsManager';
 import AdvantagesManager from './AdvantagesManager';
 import SettingsManager from './SettingsManager';
+import TimeSlotsManager from './TimeSlotsManager';
 
-type Tab = 'gallery' | 'testimonials' | 'advantages' | 'settings';
+type Tab = 'gallery' | 'testimonials' | 'advantages' | 'slots' | 'settings';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'gallery', label: 'Галерея до/после' },
   { id: 'testimonials', label: 'Отзывы' },
   { id: 'advantages', label: 'Преимущества' },
+  { id: 'slots', label: 'Время записи' },
   { id: 'settings', label: 'Настройки сайта' },
 ];
 
@@ -94,7 +96,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-20 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-lg">Lumière</span>
+            <span className="font-bold text-lg">Виктория</span>
             <span className="text-sm text-slate-400">Админ-панель</span>
           </div>
           <div className="flex items-center gap-3">
@@ -132,6 +134,7 @@ export default function AdminPage() {
         {tab === 'gallery' && <GalleryManager items={content.beforeAfter} onChange={afterChange} />}
         {tab === 'testimonials' && <TestimonialsManager items={content.testimonials} onChange={afterChange} />}
         {tab === 'advantages' && <AdvantagesManager items={content.advantages} onChange={afterChange} />}
+        {tab === 'slots' && <TimeSlotsManager onChange={notify} />}
         {tab === 'settings' && <SettingsManager settings={content.settings} onChange={afterChange} />}
       </div>
 

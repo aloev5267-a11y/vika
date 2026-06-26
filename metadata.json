@@ -1,5 +1,5 @@
 {
-  "name": "Lumière",
-  "description": "Lumière — лендинг услуг электроэпиляции. Все зоны 40 BYN, онлайн-запись на сеанс, хранение в PostgreSQL и уведомления в Telegram.",
+  "name": "Виктория",
+  "description": "Виктория — лендинг услуг электроэпиляции. Все зоны 40 BYN, онлайн-запись на сеанс, хранение в PostgreSQL и уведомления в Telegram.",
   "requestFramePermissions": []
 }

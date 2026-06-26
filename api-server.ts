@@ -114,8 +114,10 @@ export async function sendTelegramNotification(text: string): Promise<void> {
 // ============================================================
 
 export async function handleGetBookedSlots() {
-  const totalSlotsRes = await query('SELECT COUNT(*) FROM time_slots');
-  const totalSlotsCount = parseInt(totalSlotsRes.rows[0].count, 10);
+  // Актуальный список слотов берём из БД (управляется из админки).
+  const slotsRes = await query('SELECT slot_time::text FROM time_slots ORDER BY slot_time');
+  const allSlots = slotsRes.rows.map((row) => row.slot_time.substring(0, 5));
+  const totalSlotsCount = allSlots.length;
 
   const fullyBookedRes =
     totalSlotsCount > 0
@@ -138,7 +140,46 @@ export async function handleGetBookedSlots() {
     (bookedSlotsByDate[dateStr] ??= []).push(timeStr);
   });
 
-  return { fullyBookedDates, bookedSlotsByDate };
+  return { fullyBookedDates, bookedSlotsByDate, allSlots };
+}
+
+// ============================================================
+// СЛОТЫ ВРЕМЕНИ (управление из админки)
+// ============================================================
+
+interface TimeSlotRow {
+  id: number;
+  slot_time: string;
+}
+
+async function listTimeSlots() {
+  const res = await query('SELECT id, slot_time::text FROM time_slots ORDER BY slot_time');
+  return {
+    slots: res.rows.map((r: TimeSlotRow) => ({ id: r.id, time: r.slot_time.substring(0, 5) })),
+  };
+}
+
+async function createTimeSlot(b: { time?: string }) {
+  const time = String(b?.time ?? '').trim();
+  if (!TIME_RE.test(time)) throw new ApiError(400, 'Некорректный формат времени (нужно ЧЧ:ММ)');
+  try {
+    const res = await query(
+      'INSERT INTO time_slots (slot_time) VALUES ($1) RETURNING id',
+      [time]
+    );
+    return { id: res.rows[0].id };
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
+      throw new ApiError(409, 'Такое время уже есть в списке');
+    }
+    console.error('Ошибка БД при создании слота:', error);
+    throw new ApiError(500, 'Ошибка базы данных');
+  }
+}
+
+async function deleteTimeSlot(id: number) {
+  await query('DELETE FROM time_slots WHERE id=$1', [id]);
+  return { success: true };
 }
 
 export async function handleCreateBooking(body: CreateBookingInput) {
@@ -307,6 +348,14 @@ export async function dispatchApi(req: ApiRequest): Promise<unknown> {
 
     if (method === 'GET' && path === '/api/admin/content') return listAdminContent();
     if (method === 'PUT' && path === '/api/admin/settings') return updateSettings(body);
+
+    // Управление слотами времени
+    if (path === '/api/admin/time-slots') {
+      if (method === 'GET') return listTimeSlots();
+      if (method === 'POST') return createTimeSlot(body);
+    }
+    const slotMatch = path.match(/^\/api\/admin\/time-slots\/(\d+)$/);
+    if (slotMatch && method === 'DELETE') return deleteTimeSlot(parseInt(slotMatch[1], 10));
 
     // Коллекции с :id
     const idMatch = path.match(/^\/api\/admin\/(testimonials|before-after|advantages)(?:\/(\d+))?$/);

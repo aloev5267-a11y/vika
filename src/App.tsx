@@ -4,6 +4,7 @@ import IntroLoader from "./components/IntroLoader";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import BookingSection from "./components/BookingSection";
+import ServicesSection from "./components/ServicesSection";
 import AboutSection from "./components/AboutSection";
 import ProcessSection from "./components/ProcessSection";
 import AdvantagesSection from "./components/AdvantagesSection";
@@ -14,7 +15,6 @@ import ContactSection from "./components/ContactSection";
 import AdminPage from "./admin/AdminPage";
 import { services, timeSlots } from "./lib/data";
 import { useContent } from "./lib/content";
-import { IconArrowRight } from "./components/icons";
 
 type Notification = { text: string; type: "success" | "error" };
 
@@ -94,29 +94,7 @@ function LandingPage() {
           <Hero isDark={isDark} scrollToBooking={() => scrollToBooking()} beforeAfter={content.beforeAfter} />
 
           {/* УСЛУГИ */}
-          <section id="services-section" className="mb-32 relative scroll-mt-28">
-            <h2 className="text-4xl font-bold mb-12 text-balance">Наши услуги</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-              {services.map((service) => (
-                <div key={service.id} className={`p-8 rounded-3xl border flex flex-col justify-between transition-all duration-300 ${isDark ? "bg-white/5 border-white/10 hover:border-pink-500/30" : "bg-white/40 border-black/5 hover:border-purple-500/20 hover:shadow-lg"}`}>
-                  <div className="mb-8">
-                    <h3 className="text-xl font-bold mb-2">{service.title}</h3>
-                    <p className="text-sm opacity-60">{service.desc}</p>
-                  </div>
-                  <div className="flex justify-between items-center gap-4 pt-6 border-t border-dashed border-white/10">
-                    <span className="font-mono font-medium text-lg whitespace-nowrap">{service.price}</span>
-                    <button
-                      onClick={() => scrollToBooking(service.id)}
-                      className={`flex items-center gap-2 px-5 py-3 rounded-full font-medium transition-all text-sm whitespace-nowrap ${isDark ? "bg-pink-400 text-black hover:bg-pink-300" : "bg-slate-900 text-white hover:bg-slate-800"}`}
-                    >
-                      Записаться
-                      <IconArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <ServicesSection isDark={isDark} services={services} scrollToBooking={scrollToBooking} />
 
           <AdvantagesSection isDark={isDark} advantages={content.advantages} />
 
@@ -147,7 +125,7 @@ function LandingPage() {
 
         {/* ФУТЕР */}
         <footer className={`relative z-10 border-t py-8 px-6 text-center text-sm ${isDark ? "border-white/10 text-white/50" : "border-black/5 text-slate-500"}`}>
-          <p>© {new Date().getFullYear()} Lumière · Электроэпиляция в Минске · Все зоны 40 BYN</p>
+          <p>© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · Все зоны 40 BYN</p>
           <a href="/admin" className="inline-block mt-2 opacity-60 hover:opacity-100 transition-opacity">Вход для администратора</a>
         </footer>
 

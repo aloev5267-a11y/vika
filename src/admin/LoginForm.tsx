@@ -22,7 +22,7 @@ export default function LoginForm({ onSubmit, error }: Props) {
         onSubmit={handleSubmit}
         className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-8 shadow-sm"
       >
-        <h1 className="text-xl font-bold mb-1">Lumière — Админ</h1>
+        <h1 className="text-xl font-bold mb-1">Виктория — Админ</h1>
         <p className="text-sm text-slate-500 mb-6">Введите пароль администратора</p>
 
         <label className="block text-xs font-medium text-slate-500 mb-1.5">Пароль</label>

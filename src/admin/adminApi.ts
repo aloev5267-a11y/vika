@@ -87,6 +87,10 @@ export const adminApi = {
   deleteAdvantage: (id: number) => request(`/api/admin/advantages/${id}`, { method: 'DELETE' }),
 
   updateSettings: (b: Record<string, string>) => request('/api/admin/settings', { method: 'PUT', body: b }),
+
+  getTimeSlots: () => request<{ slots: { id: number; time: string }[] }>('/api/admin/time-slots'),
+  createTimeSlot: (time: string) => request('/api/admin/time-slots', { method: 'POST', body: { time } }),
+  deleteTimeSlot: (id: number) => request(`/api/admin/time-slots/${id}`, { method: 'DELETE' }),
 };
 
 /** Загрузка изображения. Возвращает { url }. */

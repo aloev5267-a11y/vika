@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { IconCheck } from "./icons";
 
 // Фиксированная стоимость одного сеанса (оплата за час работы, а не за зону).
 const SESSION_PRICE = 40;
@@ -29,9 +30,10 @@ export default function BookingSection({
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([services[0].id]);
 
   // Состояние для хранения реальных данных о бронированиях из PostgreSQL
-  const [dbData, setDbData] = useState<{ fullyBookedDates: string[]; bookedSlotsByDate: Record<string, string[]> }>({
+  const [dbData, setDbData] = useState<{ fullyBookedDates: string[]; bookedSlotsByDate: Record<string, string[]>; allSlots?: string[] }>({
     fullyBookedDates: [],
-    bookedSlotsByDate: {}
+    bookedSlotsByDate: {},
+    allSlots: undefined,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -70,8 +72,9 @@ export default function BookingSection({
     return dbData.bookedSlotsByDate[dateStr] || [];
   }, [selectedDate, dbData]);
 
-  // Полный список стандартных часов сеанса приходит из единого источника данных
-  const allTimeSlots = timeSlots;
+  // Полный список часов сеанса: приоритет — актуальные слоты из БД (управляются
+  // из админки), запасной вариант — статический список на случай недоступности БД.
+  const allTimeSlots = dbData.allSlots?.length ? dbData.allSlots : timeSlots;
 
   // Сбрасываем выбранное время, если оно оказалось занято при переключении даты
   useEffect(() => {
@@ -184,10 +187,10 @@ export default function BookingSection({
   };
 
   return (
-    <section className="mb-32 relative">
-      <div className={`absolute inset-0 rounded-[3rem] blur-[100px] opacity-5 pointer-events-none ${isDark ? "bg-pink-500" : "bg-purple-500"}`} />
+    <section className="mb-24 sm:mb-32 relative">
+      <div className={`absolute inset-0 rounded-[2rem] sm:rounded-[3rem] blur-[100px] opacity-5 pointer-events-none ${isDark ? "bg-pink-500" : "bg-purple-500"}`} />
 
-      <div className={`relative p-6 md:p-10 rounded-[3rem] border backdrop-blur-xl transition-all duration-500 ${isDark ? "bg-black/40 border-white/10" : "bg-white/60 border-black/5 shadow-2xl"}`}>
+      <div className={`relative p-4 sm:p-6 md:p-10 rounded-[2rem] sm:rounded-[3rem] border backdrop-blur-xl transition-all duration-500 ${isDark ? "bg-black/40 border-white/10" : "bg-white/60 border-black/5 shadow-2xl"}`}>
         
         {/* Заголовок */}
         <div className="mb-10 text-center md:text-left">
@@ -211,13 +214,13 @@ export default function BookingSection({
                       key={s.id}
                       type="button"
                       onClick={() => handleServiceToggle(s.id)}
-                      className={`px-5 py-3 rounded-2xl border text-sm font-medium transition-all ${
+                      className={`inline-flex items-center gap-1.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl border text-sm font-medium transition-all ${
                         isSelected 
                           ? (isDark ? "bg-pink-500/10 border-pink-400 text-pink-400 shadow-[0_0_15px_rgba(244,143,177,0.15)]" : "bg-purple-600 text-white border-purple-600")
                           : (isDark ? "bg-white/5 border-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 border-transparent text-slate-700 hover:bg-black/10")
                       }`}
                     >
-                      {isSelected && <span className="mr-1.5 font-bold">✓</span>}
+                      {isSelected && <IconCheck className="w-4 h-4 shrink-0" />}
                       {s.title} · {s.price}
                     </button>
                   );
