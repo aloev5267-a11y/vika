@@ -165,6 +165,10 @@ export default function BookingSection({
       const result = await res.json().catch(() => ({}));
 
       if (res.ok) {
+        // Отправляем цель в Яндекс.Метрику только после успешной записи
+        if (typeof window !== "undefined" && typeof window.ym === "function") {
+          window.ym(110161298, "reachGoal", "booking");
+        }
         await fetchSlots();
         setSelectedTime("");
         onNotify("Вы успешно записаны на сеанс!", "success");
