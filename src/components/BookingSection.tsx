@@ -145,7 +145,7 @@ export default function BookingSection({
     const formattedDateISO = formatDateISO(selectedDate);
     const zonesTitles = selectedServices.map((s) => s.title).join(", ");
     const formattedDateText = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
+    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice} BYN*\n📱 Телефон: \`${phone}\``;
 
     setIsSubmitting(true);
     try {
@@ -349,7 +349,7 @@ export default function BookingSection({
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
                   <span className="text-sm font-bold">Итоговая сумма:</span>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
-                    ~ {totalPrice} ₽
+                    {totalPrice} BYN
                   </span>
                 </div>
               </div>

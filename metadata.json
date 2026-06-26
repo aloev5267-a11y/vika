@@ -1,5 +1,5 @@
 {
-  "name": "ElectroEpil",
-  "description": "Лендинг услуг электроэпиляции с онлайн-записью на сеанс, хранением в PostgreSQL и уведомлениями в Telegram.",
+  "name": "Lumière",
+  "description": "Lumière — лендинг услуг электроэпиляции. Все зоны 40 BYN, онлайн-запись на сеанс, хранение в PostgreSQL и уведомления в Telegram.",
   "requestFramePermissions": []
 }

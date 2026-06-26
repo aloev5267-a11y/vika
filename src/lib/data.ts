@@ -15,10 +15,10 @@ export interface Testimonial {
  * Идентификаторы (id) согласованы с тем, что сохраняется в БД (service_id).
  */
 export const services: Service[] = [
-  { id: 'face', title: 'Лицо', desc: 'Удаление волос над губой, на подбородке и щеках.', price: 'От 1500₽' },
-  { id: 'body', title: 'Тело', desc: 'Руки, ноги, спина. Полная гладкость навсегда.', price: 'От 3000₽' },
-  { id: 'bikini', title: 'Бикини', desc: 'Деликатные зоны. Комфорт и гигиена.', price: 'От 2500₽' },
-  { id: 'legs', title: 'Ноги полностью', desc: 'Безупречный результат для ваших ног.', price: 'От 5000₽' },
+  { id: 'face', title: 'Лицо', desc: 'Удаление волос над губой, на подбородке и щеках.', price: '40 BYN' },
+  { id: 'body', title: 'Тело', desc: 'Руки, ноги, спина. Полная гладкость навсегда.', price: '40 BYN' },
+  { id: 'bikini', title: 'Бикини', desc: 'Деликатные зоны. Комфорт и гигиена.', price: '40 BYN' },
+  { id: 'legs', title: 'Ноги полностью', desc: 'Безупречный результат для ваших ног.', price: '40 BYN' },
 ];
 
 export const testimonials: Testimonial[] = [
