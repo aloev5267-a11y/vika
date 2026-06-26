@@ -92,6 +92,18 @@ SELECT * FROM (VALUES
 ) AS v(author, text, sort_order)
 WHERE NOT EXISTS (SELECT 1 FROM testimonials);
 
+-- Стартовое наполнение галереи "до/после".
+INSERT INTO before_after (title, image_before, image_after, sort_order)
+SELECT * FROM (VALUES
+  ('Ноги полностью', '/placeholders/legs-before.png',     '/placeholders/legs-after.png',     1),
+  ('Руки',           '/placeholders/arm-before.png',      '/placeholders/arm-after.png',      2),
+  ('Колени',         '/placeholders/knee-before.png',     '/placeholders/knee-after.png',     3),
+  ('Плечи',          '/placeholders/shoulder-before.png', '/placeholders/shoulder-after.png', 4),
+  ('Подмышки',       '/placeholders/underarm-before.png', '/placeholders/underarm-after.png', 5),
+  ('Спина',          '/placeholders/back-before.png',     '/placeholders/back-after.png',     6)
+) AS v(title, image_before, image_after, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM before_after);
+
 -- Стартовое наполнение преимуществ.
 INSERT INTO advantages (icon, title, description, sort_order)
 SELECT * FROM (VALUES

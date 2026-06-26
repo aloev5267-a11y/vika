@@ -51,6 +51,8 @@ export const DEFAULT_CONTENT: SiteContent = {
     { id: 2, title: 'Руки', imageBefore: '/placeholders/arm-before.png', imageAfter: '/placeholders/arm-after.png' },
     { id: 3, title: 'Колени', imageBefore: '/placeholders/knee-before.png', imageAfter: '/placeholders/knee-after.png' },
     { id: 4, title: 'Плечи', imageBefore: '/placeholders/shoulder-before.png', imageAfter: '/placeholders/shoulder-after.png' },
+    { id: 5, title: 'Подмышки', imageBefore: '/placeholders/underarm-before.png', imageAfter: '/placeholders/underarm-after.png' },
+    { id: 6, title: 'Спина', imageBefore: '/placeholders/back-before.png', imageAfter: '/placeholders/back-after.png' },
   ],
   advantages: [
     { icon: 'infinity', title: 'Навсегда', description: 'Электроэпиляция — единственный метод удаления волос навсегда.' },

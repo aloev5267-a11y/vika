@@ -87,7 +87,7 @@ export default function Header({ isDark, toggleTheme, scrollProgress, scrollToSe
           onClick={() => scrollToSection('hero-section')}
           className="font-bold text-base whitespace-nowrap tracking-tight shrink-0"
         >
-          Виктория<span className={isDark ? 'text-pink-400' : 'text-purple-600'}>.</span>
+          <span className="font-script text-[1.7rem] leading-none pr-0.5">Victoria</span><span className={isDark ? 'text-pink-400' : 'text-purple-600'}>.</span>
         </button>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -109,7 +109,7 @@ export default function Header({ isDark, toggleTheme, scrollProgress, scrollToSe
         {/* ЛЕВАЯ КАРТОЧКА: БРЕНД + НАВИГАЦИЯ */}
         <nav aria-label="Основная навигация" className={`${cardBase} px-5 py-2.5 flex items-center gap-4`}>
           <button onClick={() => scrollToSection('hero-section')} className="font-bold text-base whitespace-nowrap tracking-tight shrink-0">
-            Виктория<span className={isDark ? 'text-pink-400' : 'text-purple-600'}>.</span>
+            <span className="font-script text-[1.7rem] leading-none pr-0.5">Victoria</span><span className={isDark ? 'text-pink-400' : 'text-purple-600'}>.</span>
           </button>
           <div className="flex items-center gap-1">
             {navLinks.map((link) => (
