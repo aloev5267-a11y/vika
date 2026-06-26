@@ -1,30 +1,25 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import IntroLoader from "./components/IntroLoader";
 import BookingSection from "./components/BookingSection";
-
-// --- КОНСТАНТЫ TELEGRAM ---
-const TELEGRAM_BOT_TOKEN = "8969405850:AAE_JwZRNzELEb17kYG1ZVeoHCgzvNbZwNQ"; 
-const TELEGRAM_CHAT_ID = "8163122101"; 
+import { services, testimonials, timeSlots } from "./lib/data";
 
 // --- ИКОНКИ ---
 const IconMoon = ({ className }: { className?: string }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
     <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const IconSun = ({ className }: { className?: string }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
     <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.5" />
     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 
 const IconArrowRight = ({ className }: { className?: string }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
     <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -32,13 +27,14 @@ const IconArrowRight = ({ className }: { className?: string }) => (
 // --- КОМПОНЕНТ АНИМИРОВАННОЙ РОЗЫ ---
 const AnimatedRose = ({ isDark }: { isDark: boolean }) => {
   const petals = Array.from({ length: 12 });
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.5 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1.5, ease: "easeOut" }}
       className="relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center pointer-events-none"
+      aria-hidden="true"
     >
       <motion.div
         className={`absolute inset-0 rounded-full blur-[60px] opacity-50 ${isDark ? "bg-pink-500" : "bg-purple-400"}`}
@@ -93,26 +89,12 @@ const AnimatedRose = ({ isDark }: { isDark: boolean }) => {
   );
 };
 
-const services = [
-  { id: "face", title: "Лицо", desc: "Удаление волос над губой, подбородке и щеках.", price: "От 1500₽" },
-  { id: "body", title: "Тело", desc: "Руки, ноги, спина. Полная гладкость навсегда.", price: "От 3000₽" },
-  { id: "bikini", title: "Бикини", desc: "Деликатные зоны. Комфорт и гигиена.", price: "От 2500₽" },
-  { id: "legs", title: "Ноги полностью", desc: "Безупречный результат для ваших ног.", price: "От 5000₽" },
-];
-
-const testimonials = [
-  { text: "Лучшее решение в моей жизни. Эффект виден уже через пару процедур!", author: "Анна С." },
-  { text: "Очень бережно и профессионально.", author: "Мария К." },
-  { text: "Лазер не помогал, а электроэпиляция справилась на 100%.", author: "Елена В." },
-];
-
-const timeSlots = ["10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+type Notification = { text: string; type: "success" | "error" };
 
 export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [isDark, setIsDark] = useState(true);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationText, setNotificationText] = useState("");
+  const [notification, setNotification] = useState<Notification | null>(null);
   const [activeServiceId, setActiveServiceId] = useState(services[0].id);
 
   // Состояние прогресса прокрутки (от 0 до 100)
@@ -136,7 +118,7 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const toggleTheme = () => setIsDark(!isDark);
+  const toggleTheme = () => setIsDark((prev) => !prev);
 
   const scrollToBooking = (serviceId?: string) => {
     if (serviceId) {
@@ -148,33 +130,19 @@ export default function App() {
     }
   };
 
-  const handleBooking = async (message: string) => {
-    setNotificationText("Запись отправлена мастеру!");
-    setShowNotification(true);
-    setTimeout(() => setShowNotification(false), 4000);
-
-    try {
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: `🔔 Новая запись!\n${message}`,
-          parse_mode: "Markdown"
-        }),
-      });
-    } catch (e) {
-      console.error("Ошибка при отправке в Telegram:", e);
-    }
+  // Показ тоста. Уведомление в Telegram теперь отправляется на стороне сервера.
+  const notify = (text: string, type: Notification["type"] = "success") => {
+    setNotification({ text, type });
+    setTimeout(() => setNotification(null), 4000);
   };
 
   return (
     <>
       {showIntro && <IntroLoader onComplete={() => setShowIntro(false)} />}
       <div className={`min-h-screen relative transition-colors duration-1000 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-[#fdf5f2] text-slate-900"}`}>
-        
+
         {/* ГЛОБАЛЬНЫЙ ФОН */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
           <div className={`absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full blur-[160px] opacity-25 transition-colors duration-1000 ${isDark ? "bg-purple-600" : "bg-pink-300"}`} />
           <div className={`absolute -top-20 -right-40 w-[650px] h-[650px] rounded-full blur-[160px] opacity-25 transition-colors duration-1000 ${isDark ? "bg-pink-500" : "bg-purple-400"}`} />
         </div>
@@ -182,14 +150,21 @@ export default function App() {
         {/* ШАПКА В ВИДЕ ПАРЯЩЕЙ КАРТОЧКИ */}
         <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-auto min-w-[200px] max-w-[90%]">
           <div className={`px-5 py-2.5 rounded-full border flex items-center justify-between gap-10 transition-all duration-1000 backdrop-blur-md shadow-lg ${
-            isDark 
-              ? "bg-white/5 border-white/10 shadow-black/40" 
+            isDark
+              ? "bg-white/5 border-white/10 shadow-black/40"
               : "bg-white/40 border-black/5 shadow-slate-200/50"
           }`}>
-            
-            {/* КРУГ-ПРОГРЕСС С КРАСНЫМ ЗАПОЛНЕНИЕМ */}
-            <div className="flex items-center justify-center relative w-9 h-9">
-              <svg className="-rotate-90 w-full h-full" viewBox="0 0 32 32">
+
+            {/* КРУГ-ПРОГРЕСС ПРОКРУТКИ СТРАНИЦЫ */}
+            <div
+              className="flex items-center justify-center relative w-9 h-9"
+              role="progressbar"
+              aria-label="Прогресс прокрутки страницы"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(scrollProgress)}
+            >
+              <svg className="-rotate-90 w-full h-full" viewBox="0 0 32 32" aria-hidden="true">
                 {/* Полупрозрачная подложка круга */}
                 <circle
                   cx="16"
@@ -199,7 +174,7 @@ export default function App() {
                   strokeWidth="2.5"
                   fill="transparent"
                 />
-                {/* Активный круг, заполняющийся ярко-красным (алыми) цветом */}
+                {/* Активный круг, заполняющийся ярко-красным цветом */}
                 <motion.circle
                   cx="16"
                   cy="16"
@@ -216,11 +191,12 @@ export default function App() {
             </div>
 
             {/* КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ */}
-            <button 
-              onClick={toggleTheme} 
+            <button
+              onClick={toggleTheme}
+              aria-label={isDark ? "Включить светлую тему" : "Включить тёмную тему"}
               className={`p-2 rounded-full border transition-all duration-500 hover:scale-105 active:scale-95 ${
-                isDark 
-                  ? "border-white/10 bg-white/5 hover:bg-white/10" 
+                isDark
+                  ? "border-white/10 bg-white/5 hover:bg-white/10"
                   : "border-black/5 bg-black/5 hover:bg-black/10"
               }`}
             >
@@ -231,21 +207,21 @@ export default function App() {
 
         {/* КОНТЕНТ */}
         <main className="relative pt-32 pb-20 px-6 max-w-[1440px] mx-auto z-10">
-          
+
           {/* HERO СЕКЦИЯ */}
           <section className="flex flex-col lg:flex-row items-center justify-between gap-12 mb-32 relative">
             <div className="flex-1 text-center lg:text-left z-10">
-              <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6">
+              <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6 text-balance">
                 Ваш путь к <br />
                 <span className={`italic ${isDark ? "text-pink-400" : "text-purple-600"}`}>
                   идеальной гладкости
                 </span>
               </h1>
-              <p className="text-lg opacity-70 mb-10 max-w-xl mx-auto lg:mx-0">
+              <p className="text-lg opacity-70 mb-10 max-w-xl mx-auto lg:mx-0 text-pretty">
                 Электроэпиляция — единственный метод удаления волос навсегда.
               </p>
-              <button 
-                onClick={() => scrollToBooking()} 
+              <button
+                onClick={() => scrollToBooking()}
                 className={`inline-flex items-center gap-3 px-8 py-4 rounded-full font-medium transition-all ${isDark ? "bg-pink-400 text-black hover:bg-pink-300" : "bg-slate-900 text-white hover:bg-slate-800"}`}
               >
                 Записаться<IconArrowRight className="w-5 h-5" />
@@ -284,13 +260,13 @@ export default function App() {
 
           {/* БЛОК БРОНИРОВАНИЯ */}
           <div id="booking-section" className="scroll-mt-24">
-            <BookingSection 
-              isDark={isDark} 
-              services={services} 
-              timeSlots={timeSlots} 
+            <BookingSection
+              isDark={isDark}
+              services={services}
+              timeSlots={timeSlots}
               selectedServiceId={activeServiceId}
               onServiceChange={setActiveServiceId}
-              onBooking={handleBooking} 
+              onNotify={notify}
             />
           </div>
 
@@ -299,7 +275,7 @@ export default function App() {
             <h2 className="text-4xl font-bold mb-12 text-center">Ощущения клиентов</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[240px]">
               {testimonials.map((t, idx) => (
-                <div key={idx} className={`p-10 rounded-[2.5rem] border ${isDark ? "bg-white/5 border-white/10" : "bg-white/70 border-black/5"}`}>
+                <div key={idx} className={`p-10 rounded-[2.5rem] border flex flex-col justify-between ${isDark ? "bg-white/5 border-white/10" : "bg-white/70 border-black/5"}`}>
                   <p className="text-lg font-medium">«{t.text}»</p>
                   <span className="text-sm font-bold opacity-60">{t.author}</span>
                 </div>
@@ -310,9 +286,18 @@ export default function App() {
 
         {/* УВЕДОМЛЕНИЯ */}
         <AnimatePresence>
-          {showNotification && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed bottom-8 left-1/2 -translate-x-1/2 p-6 bg-pink-400 text-black rounded-3xl font-bold z-50 shadow-2xl">
-              {notificationText}
+          {notification && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              role="status"
+              aria-live="polite"
+              className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-6 rounded-3xl font-bold z-50 shadow-2xl ${
+                notification.type === "error" ? "bg-red-500 text-white" : "bg-pink-400 text-black"
+              }`}
+            >
+              {notification.text}
             </motion.div>
           )}
         </AnimatePresence>
@@ -320,4 +305,3 @@ export default function App() {
     </>
   );
 }
-

@@ -1,20 +1,65 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# ElectroEpil — запись на электроэпиляцию
 
-# Run and deploy your AI Studio app
+Лендинг услуг электроэпиляции с онлайн-записью на сеанс. Записи сохраняются в
+PostgreSQL, мастер получает уведомление о каждой новой записи в Telegram.
 
-This contains everything you need to run your app locally.
+- **Фронтенд:** React 19 + Vite + Tailwind CSS + motion
+- **Бэкенд:** Express + PostgreSQL (`pg`)
+- **Уведомления:** Telegram Bot API (отправка строго на стороне сервера)
 
-View your app in AI Studio: https://ai.studio/apps/ddbdb76f-efb5-4e9f-8ff6-adfe72aecb37
+## Архитектура
 
-## Run Locally
+- Обработчики API (`api-server.ts`) используются и в режиме разработки
+  (через middleware Vite в `vite.config.ts`), и в продакшене (через `server.ts`).
+- В продакшене `server.ts` поднимает Express, который раздаёт собранный фронтенд
+  из `dist/` и обслуживает эндпоинты `/api/*`.
+- Все секреты (доступ к БД, токен Telegram) читаются только из переменных
+  окружения и никогда не попадают в клиентский бандл.
 
-**Prerequisites:**  Node.js
+## Требования
 
+- Node.js 18+
+- PostgreSQL
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Установка
+
+1. Установите зависимости:
+   ```bash
+   npm install
+   ```
+2. Создайте файл `.env` на основе `.env.example` и заполните параметры
+   подключения к БД и Telegram.
+3. Создайте структуру БД:
+   ```bash
+   npm run db:init
+   # или: psql "$DATABASE_URL" -f db/schema.sql
+   ```
+
+## Разработка
+
+```bash
+npm run dev
+```
+
+Vite поднимет дев-сервер и проксирует запросы `/api/*` к обработчикам из
+`api-server.ts`.
+
+## Продакшен (на VPS)
+
+```bash
+npm run build   # сборка фронтенда в dist/
+npm run start   # запуск Express-сервера (раздаёт dist/ + API)
+```
+
+Сервер слушает `PORT` (по умолчанию 3000). Для постоянной работы используйте
+менеджер процессов, например `pm2`:
+
+```bash
+pm2 start "npm run start" --name electroepil
+```
+
+## Безопасность
+
+- Токен Telegram-бота из прежней версии был захардкожен в клиентском коде —
+  его необходимо **отозвать через @BotFather** и выпустить новый.
+- Пароль БД и токены теперь хранятся только в `.env` (файл игнорируется git).

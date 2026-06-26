@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -9,18 +7,20 @@ interface BookingSectionProps {
   timeSlots: string[];
   selectedServiceId: string; // Оставляем для обратной совместимости
   onServiceChange: (id: string) => void;
-  onBooking: (message: string) => void;
+  onNotify: (text: string, type?: "success" | "error") => void;
 }
 
-export default function BookingSection({ 
-  isDark, 
-  services, 
-  onBooking 
+export default function BookingSection({
+  isDark,
+  services,
+  timeSlots,
+  onNotify,
 }: BookingSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState("");
   const [phone, setPhone] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Множественный выбор: храним массив ID выбранных услуг (по умолчанию выбрана первая)
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([services[0].id]);
@@ -67,10 +67,8 @@ export default function BookingSection({
     return dbData.bookedSlotsByDate[dateStr] || [];
   }, [selectedDate, dbData]);
 
-  // Генерируем полный список стандартных часов сеанса (от 10:00 до 20:00)
-  const allTimeSlots = useMemo(() => {
-    return ['10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
-  }, []);
+  // Полный список стандартных часов сеанса приходит из единого источника данных
+  const allTimeSlots = timeSlots;
 
   // Сбрасываем выбранное время, если оно оказалось занято при переключении даты
   useEffect(() => {
@@ -127,48 +125,56 @@ export default function BookingSection({
     }, 0);
   }, [selectedServices]);
 
-  // Отправка формы бронирования в БД и Telegram
+  // Отправка формы бронирования. Telegram-уведомление отправляет сервер.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!selectedTime) {
-      alert("Пожалуйста, выберите время для записи.");
+      onNotify("Пожалуйста, выберите время для записи.", "error");
       return;
     }
-    
+
+    // Простая валидация телефона: минимум 7 цифр
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 7) {
+      onNotify("Укажите корректный номер телефона.", "error");
+      return;
+    }
+
     const formattedDateISO = formatDateISO(selectedDate);
-    const zonesTitles = selectedServices.map(s => s.title).join(", ");
-    
+    const zonesTitles = selectedServices.map((s) => s.title).join(", ");
+    const formattedDateText = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
+
+    setIsSubmitting(true);
     try {
-      // 1. Сначала сохраняем запись в PostgreSQL
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceId: selectedServiceIds.join(', '), // передаем строку со всеми выбранными ID
+          serviceId: selectedServiceIds.join(", "),
           bookingDate: formattedDateISO,
           bookingTime: selectedTime,
-          phone: phone
-        })
+          phone,
+          message,
+        }),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        // 2. Если запись прошла успешно, отправляем сообщение в Телеграм
-        const formattedDateText = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-        const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice}₽*\n📱 Телефон: \`${phone}\``;
-        onBooking(message);
-
-        // 3. Обновляем карту занятых слотов с сервера
         await fetchSlots();
-        alert("Вы успешно записаны на сеанс!");
+        setSelectedTime("");
+        onNotify("Вы успешно записаны на сеанс!", "success");
       } else {
-        // Ошибка наложения записей или иная валидация
-        alert(result.error || "Не удалось записаться. Возможно, это время уже заняли.");
+        onNotify(result.error || "Не удалось записаться. Возможно, это время уже заняли.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Ошибка сети при попытке забронировать время.");
+      onNotify("Ошибка сети при попытке забронировать время.", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -214,7 +220,7 @@ export default function BookingSection({
                       }`}
                     >
                       {isSelected && <span className="mr-1.5 font-bold">✓</span>}
-                      {s.title} — {s.price}
+                      {s.title} · {s.price}
                     </button>
                   );
                 })}
@@ -365,17 +371,19 @@ export default function BookingSection({
                   />
                 </div>
                 
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit" 
-                  className={`w-full p-4 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                    isDark 
-                      ? "bg-pink-400 text-black hover:bg-pink-300 shadow-pink-500/10" 
+                <motion.button
+                  whileHover={isSubmitting ? {} : { scale: 1.02 }}
+                  whileTap={isSubmitting ? {} : { scale: 0.98 }}
+                  type="submit"
+                  disabled={isSubmitting}
+                  aria-busy={isSubmitting}
+                  className={`w-full p-4 rounded-xl font-bold text-sm transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed ${
+                    isDark
+                      ? "bg-pink-400 text-black hover:bg-pink-300 shadow-pink-500/10"
                       : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/10"
                   }`}
                 >
-                  Подтвердить визит
+                  {isSubmitting ? "Отправляем..." : "Подтвердить визит"}
                 </motion.button>
               </div>
             </div>
@@ -407,9 +415,10 @@ export default function BookingSection({
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold">Выбор дальней даты</h3>
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
+                  aria-label="Закрыть календарь"
                   className="w-8 h-8 rounded-full flex items-center justify-center border border-white/10 opacity-70 hover:opacity-100 transition-opacity"
                 >
                   ✕
