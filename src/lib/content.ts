@@ -46,7 +46,12 @@ export const DEFAULT_CONTENT: SiteContent = {
     { author: 'Мария К.', text: 'Очень бережно и профессионально.' },
     { author: 'Елена В.', text: 'Лазер не помогал, а электроэпиляция справилась на 100%.' },
   ],
-  beforeAfter: [],
+  beforeAfter: [
+    { id: 1, title: 'Ноги полностью', imageBefore: '/placeholders/legs-before.png', imageAfter: '/placeholders/legs-after.png' },
+    { id: 2, title: 'Руки', imageBefore: '/placeholders/arm-before.png', imageAfter: '/placeholders/arm-after.png' },
+    { id: 3, title: 'Колени', imageBefore: '/placeholders/knee-before.png', imageAfter: '/placeholders/knee-after.png' },
+    { id: 4, title: 'Плечи', imageBefore: '/placeholders/shoulder-before.png', imageAfter: '/placeholders/shoulder-after.png' },
+  ],
   advantages: [
     { icon: 'infinity', title: 'Навсегда', description: 'Электроэпиляция — единственный метод удаления волос навсегда.' },
     { icon: 'shield', title: 'Стерильность', description: 'Только одноразовые стерильные иглы и инструменты.' },

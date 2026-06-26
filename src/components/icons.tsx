@@ -1,6 +1,8 @@
 // Общие SVG-иконки. Брендовые иконки мессенджеров — собственные пути,
 // так как lucide-react не содержит брендовых логотипов.
 
+import type { ReactElement } from 'react';
+
 type IconProps = { className?: string };
 
 export const IconMoon = ({ className }: IconProps) => (
@@ -95,11 +97,27 @@ export const IconChevronDown = ({ className }: IconProps) => (
   </svg>
 );
 
+// Алиас для FAQ-аккордеона.
+export const IconChevron = IconChevronDown;
+
+export const IconCheck = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // Карта иконок преимуществ по строковому ключу (используется и в админке).
-export const advantageIcons: Record<string, (p: IconProps) => JSX.Element> = {
+export const advantageIcons: Record<string, (p: IconProps) => ReactElement> = {
   infinity: IconInfinity,
   shield: IconShield,
   heart: IconHeart,
   award: IconAward,
   sparkles: IconSparkles,
 };
+
+export const ADVANTAGE_ICON_KEYS = Object.keys(advantageIcons);
+
+/** Возвращает компонент иконки по ключу (с запасным вариантом). */
+export function advantageIcon(key: string): (p: IconProps) => ReactElement {
+  return advantageIcons[key] ?? IconSparkles;
+}
