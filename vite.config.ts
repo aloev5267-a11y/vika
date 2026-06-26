@@ -1,56 +1,90 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
-// Импортируем функции бэкенда для работы с PostgreSQL
-import { handleGetBookedSlots, handleCreateBooking } from './api-server.ts';
+import multer from 'multer';
+import { dispatchApi, ApiError, isAuthed } from './api-server.ts';
+
+const uploadsDir = path.resolve(__dirname, 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext || '.jpg'}`);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 8 * 1024 * 1024 } });
+
+function getToken(req: { headers: Record<string, any> }): string | undefined {
+  const h = req.headers['authorization'];
+  return typeof h === 'string' && h.startsWith('Bearer ') ? h.slice(7) : undefined;
+}
 
 export default defineConfig(() => {
   return {
     plugins: [
-      react(), 
+      react(),
       tailwindcss(),
-      // Наш кастомный плагин-перехватчик для API запросов к БД
       {
         name: 'vite-backend-api',
         configureServer(server) {
-          server.middlewares.use(async (req, res, next) => {
-            
-            // 1. Обработка GET /api/booked-slots (Получение занятых мест)
-            if (req.url === '/api/booked-slots' && req.method === 'GET') {
-              try {
-                const data = await handleGetBookedSlots();
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify(data));
-              } catch (err) {
-                res.statusCode = 500;
-                res.end(JSON.stringify({ error: 'Ошибка сервера при получении данных' }));
-              }
-              return;
+          // Раздача загруженных файлов в dev
+          server.middlewares.use('/uploads', (req, res, next) => {
+            const filePath = path.join(uploadsDir, decodeURIComponent((req.url || '').split('?')[0]));
+            if (filePath.startsWith(uploadsDir) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+              fs.createReadStream(filePath).pipe(res);
+            } else {
+              next();
             }
+          });
 
-            // 2. Обработка POST /api/bookings (Создание новой записи)
-            if (req.url === '/api/bookings' && req.method === 'POST') {
-              let body = '';
-              req.on('data', chunk => { body += chunk; });
-              req.on('end', async () => {
-                try {
-                  const parsedBody = JSON.parse(body);
-                  const result = await handleCreateBooking(parsedBody);
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify(result));
-                } catch (err: any) {
-                  res.statusCode = err.status || 500;
-                  res.end(JSON.stringify({ error: err.message || 'Ошибка сервера при записи' }));
-                }
+          server.middlewares.use(async (req, res, next) => {
+            const url = req.url || '';
+            if (!url.startsWith('/api/')) return next();
+
+            const pathname = url.split('?')[0];
+            const send = (status: number, data: unknown) => {
+              res.statusCode = status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(data));
+            };
+
+            // Загрузка изображения
+            if (pathname === '/api/admin/upload' && req.method === 'POST') {
+              if (!isAuthed(getToken(req as any))) return send(401, { error: 'Требуется авторизация' });
+              upload.single('file')(req as any, res as any, (err: unknown) => {
+                const file = (req as any).file;
+                if (err || !file) return send(400, { error: 'Не удалось загрузить файл' });
+                send(200, { url: `/uploads/${file.filename}` });
               });
               return;
             }
 
-            next();
+            // Остальные JSON-маршруты
+            let raw = '';
+            req.on('data', (chunk) => (raw += chunk));
+            req.on('end', async () => {
+              try {
+                const body = raw ? JSON.parse(raw) : undefined;
+                const result = await dispatchApi({
+                  method: req.method || 'GET',
+                  path: pathname,
+                  body,
+                  token: getToken(req as any),
+                });
+                send(200, result);
+              } catch (err) {
+                if (err instanceof ApiError) return send(err.status, { error: err.message });
+                console.error('Ошибка API (dev):', err);
+                send(500, { error: 'Ошибка сервера' });
+              }
+            });
           });
-        }
-      }
+        },
+      },
     ],
     resolve: {
       alias: {
@@ -58,10 +92,7 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

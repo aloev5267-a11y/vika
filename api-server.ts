@@ -1,9 +1,9 @@
 import 'dotenv/config';
+import crypto from 'crypto';
 import { query } from './src/lib/db';
 
 /**
  * Ошибка уровня API с HTTP-статусом.
- * Позволяет обработчикам выбрасывать осмысленные коды состояния.
  */
 export class ApiError extends Error {
   status: number;
@@ -26,7 +26,6 @@ export interface CreateBookingInput {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
-/** Нормализует и проверяет телефон: оставляем цифры и ведущий "+". */
 function normalizePhone(raw: string): string {
   const trimmed = String(raw).trim();
   const digits = trimmed.replace(/\D/g, '');
@@ -36,37 +35,88 @@ function normalizePhone(raw: string): string {
   return trimmed;
 }
 
-/** Отправляет уведомление в Telegram. Секреты берутся только из окружения. */
+// ============================================================
+// АВТОРИЗАЦИЯ АДМИНИСТРАТОРА
+// ============================================================
+
+// Сессии хранятся в памяти процесса. Для одного администратора этого достаточно;
+// при перезапуске сервера потребуется повторный вход.
+const sessions = new Map<string, number>(); // token -> expiresAt (ms)
+const SESSION_TTL = 1000 * 60 * 60 * 12; // 12 часов
+
+function pruneSessions() {
+  const now = Date.now();
+  for (const [token, exp] of sessions) {
+    if (exp < now) sessions.delete(token);
+  }
+}
+
+export function login(password: string): { token: string } {
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!expected) {
+    throw new ApiError(500, 'ADMIN_PASSWORD не задан на сервере');
+  }
+  if (!password || password !== expected) {
+    throw new ApiError(401, 'Неверный пароль');
+  }
+  const token = crypto.randomUUID();
+  sessions.set(token, Date.now() + SESSION_TTL);
+  return { token };
+}
+
+function requireAuth(token?: string) {
+  pruneSessions();
+  if (!token || !sessions.has(token)) {
+    throw new ApiError(401, 'Требуется авторизация');
+  }
+  const exp = sessions.get(token)!;
+  if (exp < Date.now()) {
+    sessions.delete(token);
+    throw new ApiError(401, 'Сессия истекла');
+  }
+}
+
+/** Проверка токена без выброса исключения (для multipart-загрузок). */
+export function isAuthed(token?: string): boolean {
+  try {
+    requireAuth(token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================
+// TELEGRAM
+// ============================================================
+
 export async function sendTelegramNotification(text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-
   if (!token || !chatId) {
-    console.warn('Telegram не настроен (нет TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) — уведомление пропущено.');
+    console.warn('Telegram не настроен — уведомление пропущено.');
     return;
   }
-
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
     });
-    if (!res.ok) {
-      console.error('Telegram API вернул ошибку:', res.status, await res.text());
-    }
+    if (!res.ok) console.error('Telegram API ошибка:', res.status, await res.text());
   } catch (e) {
-    // Сбой отправки уведомления не должен ломать саму запись
     console.error('Ошибка при отправке в Telegram:', e);
   }
 }
 
-// Обработчик для получения занятых слотов (GET)
+// ============================================================
+// БРОНИРОВАНИЕ
+// ============================================================
+
 export async function handleGetBookedSlots() {
   const totalSlotsRes = await query('SELECT COUNT(*) FROM time_slots');
   const totalSlotsCount = parseInt(totalSlotsRes.rows[0].count, 10);
 
-  // Если справочник слотов пуст — день не может быть "забит полностью"
   const fullyBookedRes =
     totalSlotsCount > 0
       ? await query(
@@ -80,38 +130,24 @@ export async function handleGetBookedSlots() {
 
   const fullyBookedDates = fullyBookedRes.rows.map((row) => row.booking_date);
 
-  const allBookingsRes = await query(
-    `SELECT booking_date::text, booking_time::text FROM bookings`
-  );
-
+  const allBookingsRes = await query(`SELECT booking_date::text, booking_time::text FROM bookings`);
   const bookedSlotsByDate: Record<string, string[]> = {};
-
   allBookingsRes.rows.forEach((row) => {
     const dateStr = row.booking_date;
     const timeStr = row.booking_time.substring(0, 5);
-
-    if (!bookedSlotsByDate[dateStr]) {
-      bookedSlotsByDate[dateStr] = [];
-    }
-    bookedSlotsByDate[dateStr].push(timeStr);
+    (bookedSlotsByDate[dateStr] ??= []).push(timeStr);
   });
 
   return { fullyBookedDates, bookedSlotsByDate };
 }
 
-// Обработчик для создания новой записи (POST)
 export async function handleCreateBooking(body: CreateBookingInput) {
   const { serviceId, bookingDate, bookingTime, phone } = body ?? ({} as CreateBookingInput);
-
   if (!serviceId || !bookingDate || !bookingTime || !phone) {
     throw new ApiError(400, 'Все поля обязательны');
   }
-  if (!DATE_RE.test(bookingDate)) {
-    throw new ApiError(400, 'Некорректный формат даты');
-  }
-  if (!TIME_RE.test(bookingTime)) {
-    throw new ApiError(400, 'Некорректный формат времени');
-  }
+  if (!DATE_RE.test(bookingDate)) throw new ApiError(400, 'Некорректный формат даты');
+  if (!TIME_RE.test(bookingTime)) throw new ApiError(400, 'Некорректный формат времени');
 
   const normalizedPhone = normalizePhone(phone);
 
@@ -125,15 +161,176 @@ export async function handleCreateBooking(body: CreateBookingInput) {
     if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
       throw new ApiError(409, 'Это время уже занято!');
     }
-    console.error('Ошибка базы данных при создании записи:', error);
+    console.error('Ошибка БД при создании записи:', error);
     throw new ApiError(500, 'Ошибка базы данных');
   }
 
-  // Запись сохранена — уведомляем мастера в Telegram (на стороне сервера).
   const text =
     body.message ??
     `🔔 Новая запись!\n📅 Дата: ${bookingDate}\n⏰ Время: ${bookingTime}\n📱 Телефон: ${normalizedPhone}`;
   await sendTelegramNotification(text);
 
   return { success: true, message: 'Вы успешно записаны!' };
+}
+
+// ============================================================
+// ПУБЛИЧНЫЙ КОНТЕНТ
+// ============================================================
+
+export async function getPublicContent() {
+  const [testimonials, beforeAfter, advantages, settingsRes] = await Promise.all([
+    query('SELECT id, author, text FROM testimonials ORDER BY sort_order, id'),
+    query('SELECT id, title, image_before, image_after FROM before_after ORDER BY sort_order, id'),
+    query('SELECT id, icon, title, description FROM advantages ORDER BY sort_order, id'),
+    query('SELECT key, value FROM site_settings'),
+  ]);
+
+  const settings: Record<string, string> = {};
+  settingsRes.rows.forEach((r) => (settings[r.key] = r.value));
+
+  return {
+    testimonials: testimonials.rows,
+    beforeAfter: beforeAfter.rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      imageBefore: r.image_before,
+      imageAfter: r.image_after,
+    })),
+    advantages: advantages.rows,
+    settings,
+  };
+}
+
+// ============================================================
+// АДМИН: CRUD
+// ============================================================
+
+async function listAdminContent() {
+  return getPublicContent();
+}
+
+async function createTestimonial(b: { author?: string; text?: string; sortOrder?: number }) {
+  if (!b.author || !b.text) throw new ApiError(400, 'Имя и текст обязательны');
+  const res = await query(
+    'INSERT INTO testimonials (author, text, sort_order) VALUES ($1, $2, $3) RETURNING id',
+    [b.author, b.text, b.sortOrder ?? 0]
+  );
+  return { id: res.rows[0].id };
+}
+
+async function updateTestimonial(id: number, b: { author?: string; text?: string; sortOrder?: number }) {
+  await query('UPDATE testimonials SET author=$1, text=$2, sort_order=$3 WHERE id=$4', [
+    b.author, b.text, b.sortOrder ?? 0, id,
+  ]);
+  return { success: true };
+}
+
+async function createBeforeAfter(b: { title?: string; imageBefore?: string; imageAfter?: string; sortOrder?: number }) {
+  if (!b.imageBefore || !b.imageAfter) throw new ApiError(400, 'Нужны оба фото (до и после)');
+  const res = await query(
+    'INSERT INTO before_after (title, image_before, image_after, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
+    [b.title ?? '', b.imageBefore, b.imageAfter, b.sortOrder ?? 0]
+  );
+  return { id: res.rows[0].id };
+}
+
+async function updateBeforeAfter(id: number, b: { title?: string; imageBefore?: string; imageAfter?: string; sortOrder?: number }) {
+  await query('UPDATE before_after SET title=$1, image_before=$2, image_after=$3, sort_order=$4 WHERE id=$5', [
+    b.title ?? '', b.imageBefore, b.imageAfter, b.sortOrder ?? 0, id,
+  ]);
+  return { success: true };
+}
+
+async function createAdvantage(b: { icon?: string; title?: string; description?: string; sortOrder?: number }) {
+  if (!b.title || !b.description) throw new ApiError(400, 'Заголовок и описание обязательны');
+  const res = await query(
+    'INSERT INTO advantages (icon, title, description, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
+    [b.icon ?? 'sparkles', b.title, b.description, b.sortOrder ?? 0]
+  );
+  return { id: res.rows[0].id };
+}
+
+async function updateAdvantage(id: number, b: { icon?: string; title?: string; description?: string; sortOrder?: number }) {
+  await query('UPDATE advantages SET icon=$1, title=$2, description=$3, sort_order=$4 WHERE id=$5', [
+    b.icon ?? 'sparkles', b.title, b.description, b.sortOrder ?? 0, id,
+  ]);
+  return { success: true };
+}
+
+async function deleteRow(table: 'testimonials' | 'before_after' | 'advantages', id: number) {
+  await query(`DELETE FROM ${table} WHERE id=$1`, [id]);
+  return { success: true };
+}
+
+async function updateSettings(body: Record<string, string>) {
+  const entries = Object.entries(body || {});
+  for (const [key, value] of entries) {
+    await query(
+      `INSERT INTO site_settings (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [key, String(value ?? '')]
+    );
+  }
+  return { success: true };
+}
+
+// ============================================================
+// ДИСПЕТЧЕР JSON-РОУТОВ
+// Используется и Express (server.ts), и Vite dev (vite.config.ts).
+// ============================================================
+
+export interface ApiRequest {
+  method: string;
+  path: string; // pathname без query
+  body: any;
+  token?: string;
+}
+
+export async function dispatchApi(req: ApiRequest): Promise<unknown> {
+  const { method, path, body, token } = req;
+
+  // --- Публичные маршруты ---
+  if (method === 'GET' && path === '/api/booked-slots') return handleGetBookedSlots();
+  if (method === 'POST' && path === '/api/bookings') return handleCreateBooking(body);
+  if (method === 'GET' && path === '/api/content') return getPublicContent();
+
+  // --- Авторизация ---
+  if (method === 'POST' && path === '/api/admin/login') return login(body?.password);
+  if (method === 'GET' && path === '/api/admin/verify') {
+    requireAuth(token);
+    return { ok: true };
+  }
+
+  // --- Админские маршруты (всё ниже требует токен) ---
+  if (path.startsWith('/api/admin/')) {
+    requireAuth(token);
+
+    if (method === 'GET' && path === '/api/admin/content') return listAdminContent();
+    if (method === 'PUT' && path === '/api/admin/settings') return updateSettings(body);
+
+    // Коллекции с :id
+    const idMatch = path.match(/^\/api\/admin\/(testimonials|before-after|advantages)(?:\/(\d+))?$/);
+    if (idMatch) {
+      const resource = idMatch[1];
+      const id = idMatch[2] ? parseInt(idMatch[2], 10) : null;
+
+      if (resource === 'testimonials') {
+        if (method === 'POST') return createTestimonial(body);
+        if (method === 'PUT' && id) return updateTestimonial(id, body);
+        if (method === 'DELETE' && id) return deleteRow('testimonials', id);
+      }
+      if (resource === 'before-after') {
+        if (method === 'POST') return createBeforeAfter(body);
+        if (method === 'PUT' && id) return updateBeforeAfter(id, body);
+        if (method === 'DELETE' && id) return deleteRow('before_after', id);
+      }
+      if (resource === 'advantages') {
+        if (method === 'POST') return createAdvantage(body);
+        if (method === 'PUT' && id) return updateAdvantage(id, body);
+        if (method === 'DELETE' && id) return deleteRow('advantages', id);
+      }
+    }
+  }
+
+  throw new ApiError(404, 'Маршрут не найден');
 }
