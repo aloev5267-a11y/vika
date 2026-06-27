@@ -7,7 +7,6 @@ import BookingSection from "./components/BookingSection";
 import ServicesSection from "./components/ServicesSection";
 import AboutSection from "./components/AboutSection";
 import ExperienceSection from "./components/ExperienceSection";
-import GallerySection from "./components/GallerySection";
 import FaqSection from "./components/FaqSection";
 import TestimonialsSection from "./components/TestimonialsSection";
 import ContactSection from "./components/ContactSection";
@@ -161,8 +160,6 @@ function LandingPage() {
               onNotify={notify}
             />
           </div>
-
-          <GallerySection isDark={isDark} items={content.beforeAfter} />
 
           <AboutSection isDark={isDark} settings={content.settings} />
 

@@ -90,7 +90,10 @@ export default function Hero({ isDark, scrollToBooking, beforeAfter }: Props) {
         </button>
       </div>
 
-      <div className="flex-1 flex justify-center lg:justify-end items-center z-10 w-full">
+      <div
+        id={hasGallery ? 'gallery-section' : undefined}
+        className="flex-1 flex justify-center lg:justify-end items-center z-10 w-full scroll-mt-28"
+      >
         {hasGallery ? <HeroGallery items={beforeAfter} isDark={isDark} /> : <AnimatedRose isDark={isDark} />}
       </div>
     </section>
