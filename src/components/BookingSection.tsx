@@ -180,9 +180,19 @@ export default function BookingSection({
       const result = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        // Отправляем цель в Яндекс.Метрику только после успешной записи
+        // Цель в Яндекс.Метрику отправляем ТОЛЬКО после успешной записи,
+        // то есть когда человек реально оставил свои данные.
         if (typeof window !== "undefined" && typeof window.ym === "function") {
-          window.ym(YANDEX_METRIKA_ID, "reachGoal", "booking");
+          try {
+            window.ym(YANDEX_METRIKA_ID, "reachGoal", "booking", {
+              services: selectedServiceIds.join(", "),
+              date: formattedDateISO,
+              time: selectedTime,
+            });
+          } catch (metrikaErr) {
+            // Сбой аналитики не должен влиять на пользовательский сценарий
+            console.error("[v0] Yandex Metrika reachGoal error:", metrikaErr);
+          }
         }
         await fetchSlots();
         setSelectedTime("");
