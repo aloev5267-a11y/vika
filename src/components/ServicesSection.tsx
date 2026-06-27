@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Service } from '../lib/data';
-import { IconArrowRight, IconBody, IconBikini, IconLegs } from './icons';
+import { IconArrowRight, IconBody, IconBikini, IconLegs, IconCheck } from './icons';
 
 interface Props {
   isDark: boolean;
@@ -16,30 +16,65 @@ const serviceIcons: Record<string, (p: { className?: string }) => React.ReactEle
   legs: IconLegs,
 };
 
+// Доп. детали для карточки услуги. Держим локально, чтобы не менять
+// общий тип Service (он переиспользуется бэкендом).
+const serviceDetails: Record<string, { tagline: string; includes: string[] }> = {
+  body: {
+    tagline: 'Руки, плечи, спина и живот',
+    includes: ['Любые зоны тела', 'Стерильные одноразовые иглы', 'Подбор силы тока под вашу кожу'],
+  },
+  bikini: {
+    tagline: 'Деликатно и гигиенично',
+    includes: ['Классика или глубокое бикини', 'Анестезия по желанию', 'Полная конфиденциальность'],
+  },
+  legs: {
+    tagline: 'Идеальная гладкость надолго',
+    includes: ['Голень и бёдра полностью', 'Работа по всей длине', 'Видимый результат уже после курса'],
+  },
+};
+
 export default function ServicesSection({ isDark, services, scrollToBooking }: Props) {
   const [activeId, setActiveId] = useState(services[0]?.id);
   const active = services.find((s) => s.id === activeId) ?? services[0];
   const ActiveIcon = serviceIcons[active.id] ?? IconBody;
+  const activeDetail = serviceDetails[active.id];
 
   const accent = isDark ? 'text-pink-400' : 'text-purple-600';
 
   return (
     <section id="services-section" className="mb-24 sm:mb-32 relative scroll-mt-28">
-      <div className="mb-8 sm:mb-12">
-        <h2 className="text-3xl sm:text-4xl font-bold text-balance">Наши услуги</h2>
-        <p className="text-sm opacity-60 mt-2 max-w-md text-pretty">
-          Оплата за время работы — 40 BYN за час, независимо от количества выбранных зон.
-        </p>
+      {/* ЗАГОЛОВОК */}
+      <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <span
+            className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] mb-3 ${accent}`}
+          >
+            <span className={`h-px w-6 ${isDark ? 'bg-pink-400/60' : 'bg-purple-600/60'}`} />
+            Прайс
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-balance">Наши услуги</h2>
+        </div>
+        {/* Прайс-пилюля */}
+        <div
+          className={`inline-flex items-center gap-3 self-start rounded-2xl border px-5 py-3 ${
+            isDark ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/5 shadow-sm'
+          }`}
+        >
+          <div className="flex flex-col">
+            <span className="text-[11px] uppercase tracking-wide opacity-50">Единая ставка</span>
+            <span className="text-sm font-semibold">Оплата за время</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className={`text-2xl font-bold font-mono ${accent}`}>40</span>
+            <span className="text-sm opacity-60">BYN / час</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
-        {/* СЕЛЕКТОР ЗОН: на мобильном — сетка 2×2, на десктопе — вертикальный список */}
-        <div
-          role="tablist"
-          aria-label="Зоны услуг"
-          className="grid grid-cols-2 lg:flex lg:flex-col gap-2"
-        >
-          {services.map((s) => {
+        {/* СЕЛЕКТОР ЗОН */}
+        <div role="tablist" aria-label="Зоны услуг" className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-2">
+          {services.map((s, i) => {
             const Icon = serviceIcons[s.id] ?? IconBody;
             const isActive = s.id === active.id;
             return (
@@ -48,14 +83,14 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveId(s.id)}
-                className={`group flex items-center gap-3 w-full rounded-2xl border px-4 py-3.5 text-left transition-all ${
+                className={`group relative flex items-center gap-3 w-full rounded-2xl border px-4 py-3.5 text-left transition-all ${
                   isActive
                     ? isDark
-                      ? 'bg-pink-500/10 border-pink-400/60 shadow-[0_0_20px_rgba(244,143,177,0.12)]'
+                      ? 'bg-pink-500/10 border-pink-400/60 shadow-[0_0_24px_rgba(244,143,177,0.14)]'
                       : 'bg-purple-600 border-purple-600 text-white shadow-lg'
                     : isDark
-                      ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                      : 'bg-white/50 border-black/5 hover:bg-white/80'
+                      ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                      : 'bg-white/50 border-black/5 hover:bg-white/90 hover:border-black/10'
                 }`}
               >
                 <span
@@ -71,9 +106,23 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 >
                   <Icon className="w-5 h-5" />
                 </span>
-                <span className="flex flex-col min-w-0">
+                <span className="flex flex-col min-w-0 flex-1">
                   <span className="font-semibold text-sm truncate">{s.title}</span>
-                  <span className={`text-xs ${isActive ? 'opacity-80' : 'opacity-50'}`}>{s.price}</span>
+                  <span className={`text-xs ${isActive ? 'opacity-80' : 'opacity-50'}`}>
+                    {serviceDetails[s.id]?.tagline ?? s.price}
+                  </span>
+                </span>
+                {/* Стрелка у активного пункта на десктопе */}
+                <IconArrowRight
+                  className={`hidden lg:block w-4 h-4 shrink-0 transition-all ${
+                    isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-1'
+                  }`}
+                />
+                {/* Порядковый номер */}
+                <span
+                  className={`lg:hidden text-xs font-mono tabular-nums ${isActive ? 'opacity-60' : 'opacity-30'}`}
+                >
+                  0{i + 1}
                 </span>
               </button>
             );
@@ -82,7 +131,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
 
         {/* ДЕТАЛЬНАЯ КАРТОЧКА АКТИВНОЙ ЗОНЫ */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-6 sm:p-10 flex flex-col justify-between min-h-[280px] ${
+          className={`relative overflow-hidden rounded-3xl border p-6 sm:p-10 flex flex-col justify-between min-h-[320px] ${
             isDark ? 'bg-white/5 border-white/10' : 'bg-white/60 border-black/5 shadow-xl'
           }`}
         >
@@ -110,14 +159,32 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 <ActiveIcon className="w-7 h-7" />
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold mb-3">{active.title}</h3>
-              <p className="text-base opacity-70 leading-relaxed max-w-lg text-pretty">{active.desc}</p>
+              <p className="text-base opacity-70 leading-relaxed max-w-lg text-pretty mb-6">{active.desc}</p>
+
+              {/* СПИСОК "ЧТО ВХОДИТ" */}
+              {activeDetail && (
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2.5 max-w-lg">
+                  {activeDetail.includes.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm">
+                      <span
+                        className={`flex items-center justify-center w-5 h-5 rounded-full shrink-0 mt-0.5 ${
+                          isDark ? 'bg-pink-400/15 text-pink-400' : 'bg-purple-600/10 text-purple-600'
+                        }`}
+                      >
+                        <IconCheck className="w-3 h-3" />
+                      </span>
+                      <span className="opacity-80 text-pretty">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           </AnimatePresence>
 
           <div className="relative z-10 mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-dashed border-current/10">
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-bold font-mono ${accent}`}>{active.price}</span>
-              <span className="text-sm opacity-50">/ час</span>
+              <span className="text-sm opacity-50">/ час работы</span>
             </div>
             <button
               onClick={() => scrollToBooking(active.id)}
