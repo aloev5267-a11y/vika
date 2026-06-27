@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "postbuild": "tsx scripts/setup-telegram.ts",
+    "setup:telegram": "tsx scripts/setup-telegram.ts",
     "preview": "vite preview",
     "start": "tsx server.ts",
     "db:init": "psql \"$DATABASE_URL\" -f db/schema.sql",

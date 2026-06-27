@@ -66,6 +66,7 @@ export default defineConfig(() => {
                   path: pathname,
                   body,
                   token: getToken(req as any),
+                  secretToken: req.headers['x-telegram-bot-api-secret-token'] as string | undefined,
                 });
                 send(200, result);
               } catch (err) {

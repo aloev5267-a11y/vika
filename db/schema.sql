@@ -12,25 +12,43 @@ CREATE TABLE IF NOT EXISTS time_slots (
 );
 
 -- Записи клиентов.
+-- Одна запись = один визит, который может занимать НЕСКОЛЬКО подряд идущих часов
+-- (booking_time — час начала, duration_hours — сколько часов подряд занято).
 CREATE TABLE IF NOT EXISTS bookings (
-  id            SERIAL PRIMARY KEY,
-  service_id    TEXT        NOT NULL,
-  booking_date  DATE        NOT NULL,
-  booking_time  TIME        NOT NULL,
-  phone         TEXT        NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id             SERIAL PRIMARY KEY,
+  service_id     TEXT        NOT NULL,
+  booking_date   DATE        NOT NULL,
+  booking_time   TIME        NOT NULL,
+  duration_hours INT         NOT NULL DEFAULT 1,
+  phone          TEXT        NOT NULL,
+  client_name    TEXT        NOT NULL DEFAULT '',
+  -- Статус заявки: pending — ждёт подтверждения мастера, confirmed — подтверждена,
+  -- rejected — отклонена (слот снова свободен). pending и confirmed занимают слот.
+  status         TEXT        NOT NULL DEFAULT 'pending',
+  -- id сообщения в Telegram, чтобы редактировать его при смене статуса.
+  tg_message_id  BIGINT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  -- Ключевое ограничение: одно и то же время в один день нельзя занять дважды.
+  -- Ключевое ограничение: одно и то же ВРЕМЯ НАЧАЛА в один день нельзя занять дважды.
   -- Именно нарушение этого ограничения (код 23505) обрабатывается в API как 409.
   CONSTRAINT bookings_unique_slot UNIQUE (booking_date, booking_time)
 );
 
+-- Миграция для уже существующих баз (idempotent): добавляем новые поля,
+-- если таблица bookings была создана по старой схеме.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS duration_hours INT  NOT NULL DEFAULT 1;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name    TEXT NOT NULL DEFAULT '';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status         TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tg_message_id  BIGINT;
+
 -- Индекс для быстрых выборок по дате.
 CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings (booking_date);
 
--- Наполняем справочник стандартными слотами (10:00–20:00 через 2 часа).
+-- Наполняем справочник почасовыми слотами (10:00–20:00, шаг 1 час).
+-- Клиент сам выбирает час начала и длительность визита (по 1 часу).
 INSERT INTO time_slots (slot_time)
-VALUES ('10:00'), ('12:00'), ('14:00'), ('16:00'), ('18:00'), ('20:00')
+VALUES ('10:00'), ('11:00'), ('12:00'), ('13:00'), ('14:00'), ('15:00'),
+       ('16:00'), ('17:00'), ('18:00'), ('19:00'), ('20:00')
 ON CONFLICT (slot_time) DO NOTHING;
 
 -- ============================================================

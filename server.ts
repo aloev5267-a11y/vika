@@ -47,6 +47,7 @@ app.all(/^\/api\/.*/, async (req, res) => {
       path: url.pathname,
       body: req.body,
       token: getToken(req),
+      secretToken: req.headers['x-telegram-bot-api-secret-token'] as string | undefined,
     });
     res.json(result);
   } catch (err) {

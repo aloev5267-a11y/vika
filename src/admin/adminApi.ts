@@ -94,15 +94,24 @@ export const adminApi = {
 
   getBookings: () => request<BookingsResponse>('/api/admin/bookings'),
   deleteBooking: (id: number) => request(`/api/admin/bookings/${id}`, { method: 'DELETE' }),
+  setBookingStatus: (id: number, status: 'confirmed' | 'rejected') =>
+    request(`/api/admin/bookings/${id}/status`, { method: 'POST', body: { status } }),
 };
+
+export type BookingStatus = 'pending' | 'confirmed' | 'rejected';
 
 export interface AdminBooking {
   id: number;
   serviceId: string;
   serviceTitle: string;
   date: string; // YYYY-MM-DD
-  time: string; // HH:MM
+  time: string; // HH:MM (начало)
+  endTime: string; // HH:MM (конец)
+  durationHours: number;
   phone: string;
+  name: string;
+  status: BookingStatus;
+  total: number;
   createdAt: string;
   isPast: boolean;
 }
@@ -111,6 +120,7 @@ export interface BookingsResponse {
   bookings: AdminBooking[];
   total: number;
   upcoming: number;
+  pending: number;
 }
 
 /** Загрузка изображения. Возвращает { url }. */

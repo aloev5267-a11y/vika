@@ -13,6 +13,13 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Все' },
 ];
 
+/** Стили и подпись бейджа статуса заявки. */
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  pending: { label: 'Ожидает', className: 'bg-amber-100 text-amber-700' },
+  confirmed: { label: 'Подтверждена', className: 'bg-emerald-100 text-emerald-700' },
+  rejected: { label: 'Отклонена', className: 'bg-red-100 text-red-600' },
+};
+
 /** Человекочитаемая дата: «пн, 7 июля 2026». */
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
@@ -27,11 +34,12 @@ function formatDate(iso: string): string {
 
 export default function BookingsManager({ onChange }: Props) {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
-  const [stats, setStats] = useState({ total: 0, upcoming: 0 });
+  const [stats, setStats] = useState({ total: 0, upcoming: 0, pending: 0 });
   const [filter, setFilter] = useState<Filter>('upcoming');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -39,7 +47,7 @@ export default function BookingsManager({ onChange }: Props) {
     try {
       const data = await adminApi.getBookings();
       setBookings(data.bookings);
-      setStats({ total: data.total, upcoming: data.upcoming });
+      setStats({ total: data.total, upcoming: data.upcoming, pending: data.pending });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить записи');
     } finally {
@@ -50,6 +58,24 @@ export default function BookingsManager({ onChange }: Props) {
   useEffect(() => {
     load();
   }, []);
+
+  const handleStatus = async (b: AdminBooking, status: 'confirmed' | 'rejected') => {
+    const verb = status === 'confirmed' ? 'подтвердить' : 'отклонить';
+    if (status === 'rejected' && !confirm(`Отклонить запись на ${formatDate(b.date)} в ${b.time}? Слот снова станет свободным.`)) {
+      return;
+    }
+    setUpdatingId(b.id);
+    setError('');
+    try {
+      await adminApi.setBookingStatus(b.id, status);
+      await load();
+      onChange(status === 'confirmed' ? 'Запись подтверждена' : 'Запись отклонена, слот освобождён');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Не удалось ${verb} запись`);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleDelete = async (b: AdminBooking) => {
     if (!confirm(`Отменить запись на ${formatDate(b.date)} в ${b.time}? Слот снова станет свободным.`)) {
@@ -89,7 +115,11 @@ export default function BookingsManager({ onChange }: Props) {
   return (
     <div className="space-y-6">
       {/* СТАТИСТИКА */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5">
+          <p className="text-xs font-medium text-slate-500">Ожидают подтверждения</p>
+          <p className="text-3xl font-bold mt-1 text-amber-600">{stats.pending}</p>
+        </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <p className="text-xs font-medium text-slate-500">Предстоящие записи</p>
           <p className="text-3xl font-bold mt-1 text-slate-900">{stats.upcoming}</p>
@@ -141,23 +171,55 @@ export default function BookingsManager({ onChange }: Props) {
                 <span className="text-xs text-slate-400">{list.length} зап.</span>
               </div>
               <ul className="divide-y divide-slate-100">
-                {list.map((b) => (
+                {list.map((b) => {
+                  const badge = STATUS_BADGE[b.status] ?? STATUS_BADGE.pending;
+                  const busy = updatingId === b.id;
+                  return (
                   <li
                     key={b.id}
                     className={`px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${
-                      b.isPast ? 'opacity-60' : ''
+                      b.isPast || b.status === 'rejected' ? 'opacity-60' : ''
                     }`}
                   >
-                    <span className="font-mono font-bold text-lg text-slate-900 w-16 shrink-0">{b.time}</span>
+                    <div className="w-24 shrink-0">
+                      <span className="font-mono font-bold text-lg text-slate-900 block leading-tight">
+                        {b.time}–{b.endTime}
+                      </span>
+                      <span className="text-xs text-slate-400">{b.durationHours} ч · {b.total} BYN</span>
+                    </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-900 truncate">{b.serviceTitle}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-slate-900 truncate">{b.serviceTitle}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      {b.name && <p className="text-sm text-slate-600">{b.name}</p>}
                       <a href={`tel:+${digits(b.phone)}`} className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
                         {b.phone}
                       </a>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      {b.status !== 'confirmed' && (
+                        <button
+                          onClick={() => handleStatus(b, 'confirmed')}
+                          disabled={busy}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                        >
+                          {busy ? '…' : 'Подтвердить'}
+                        </button>
+                      )}
+                      {b.status !== 'rejected' && (
+                        <button
+                          onClick={() => handleStatus(b, 'rejected')}
+                          disabled={busy}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                        >
+                          {busy ? '…' : 'Отклонить'}
+                        </button>
+                      )}
                       <a
                         href={`https://t.me/+${digits(b.phone)}`}
                         target="_blank"
@@ -179,11 +241,12 @@ export default function BookingsManager({ onChange }: Props) {
                         disabled={deletingId === b.id}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
                       >
-                        {deletingId === b.id ? '…' : 'Отменить'}
+                        {deletingId === b.id ? '…' : 'Удалить'}
                       </button>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           ))}

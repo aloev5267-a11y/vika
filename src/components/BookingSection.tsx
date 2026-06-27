@@ -20,7 +20,9 @@ export default function BookingSection({
 }: BookingSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState("");
+  const [durationHours, setDurationHours] = useState(1);
   const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -87,12 +89,54 @@ export default function BookingSection({
   // из админки), запасной вариант — статический список на случай недоступности БД.
   const allTimeSlots = dbData.allSlots?.length ? dbData.allSlots : timeSlots;
 
+  // "14:00" + n часов → "15:00" (часовой шаг, минуты сохраняем).
+  const addHours = (time: string, hours: number) => {
+    const [h, m] = time.split(":").map(Number);
+    return `${String(h + hours).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  // Множество доступных часов расписания — для проверки непрерывности.
+  const slotSet = useMemo(() => new Set(allTimeSlots), [allTimeSlots]);
+
+  // Максимально доступная длительность от выбранного времени: считаем, сколько
+  // подряд идущих свободных часов есть начиная с выбранного старта.
+  const maxDuration = useMemo(() => {
+    if (!selectedTime) return 0;
+    let count = 0;
+    for (let i = 0; i < 12; i++) {
+      const hour = addHours(selectedTime, i);
+      if (!slotSet.has(hour) || activeBookedSlots.includes(hour)) break;
+      count++;
+    }
+    return count;
+  }, [selectedTime, slotSet, activeBookedSlots]);
+
+  // Список вариантов длительности (1..maxDuration).
+  const durationOptions = useMemo(
+    () => Array.from({ length: maxDuration }, (_, i) => i + 1),
+    [maxDuration]
+  );
+
   // Сбрасываем выбранное время, если оно оказалось занято при переключении даты
   useEffect(() => {
     if (selectedTime && activeBookedSlots.includes(selectedTime)) {
       setSelectedTime("");
     }
   }, [selectedDate, activeBookedSlots]);
+
+  // Корректируем длительность, если она вышла за пределы доступного диапазона.
+  useEffect(() => {
+    if (maxDuration === 0) {
+      if (durationHours !== 1) setDurationHours(1);
+    } else if (durationHours > maxDuration) {
+      setDurationHours(maxDuration);
+    } else if (durationHours < 1) {
+      setDurationHours(1);
+    }
+  }, [maxDuration]);
+
+  // Конец визита и итоговая стоимость зависят от длительности.
+  const endTime = selectedTime ? addHours(selectedTime, durationHours) : "";
 
   // Ключ текущего дня (YYYY-MM-DD): обновляется при смене суток, чтобы
   // календарь не «застревал» на вчерашней дате, если вкладка открыта долго.
@@ -140,8 +184,8 @@ export default function BookingSection({
     return services.filter((s) => selectedServiceIds.includes(s.id));
   }, [services, selectedServiceIds]);
 
-  // Цена фиксированная — клиент платит за час работы (сеанс), а не за каждую зону.
-  const totalPrice = SESSION_PRICE;
+  // Цена за час фиксированная (не зависит от числа зон). Итог = часы × ставка.
+  const totalPrice = SESSION_PRICE * Math.max(1, durationHours);
 
   // Отправка формы бронирования. Telegram-уведомление отправляет сервер.
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,6 +194,11 @@ export default function BookingSection({
 
     if (!selectedTime) {
       onNotify("Пожалуйста, выберите время для записи.", "error");
+      return;
+    }
+
+    if (durationHours < 1) {
+      onNotify("Пожалуйста, выберите длительность визита.", "error");
       return;
     }
 
@@ -173,7 +222,9 @@ export default function BookingSection({
           serviceId: selectedServiceIds.join(", "),
           bookingDate: formattedDateISO,
           bookingTime: selectedTime,
+          durationHours,
           phone,
+          name,
         }),
       });
 
@@ -188,6 +239,7 @@ export default function BookingSection({
               services: selectedServiceIds.join(", "),
               date: formattedDateISO,
               time: selectedTime,
+              duration: durationHours,
             });
           } catch (metrikaErr) {
             // Сбой аналитики не должен влиять на пользовательский сценарий
@@ -196,7 +248,8 @@ export default function BookingSection({
         }
         await fetchSlots();
         setSelectedTime("");
-        onNotify("Вы успешно записаны на сеанс!", "success");
+        setDurationHours(1);
+        onNotify(result.message || "Заявка отправлена! Мастер свяжется с вами для подтверждения.", "success");
       } else {
         onNotify(result.error || "Не удалось записаться. Возможно, это время уже заняли.", "error");
       }
@@ -306,10 +359,10 @@ export default function BookingSection({
               </div>
             </div>
 
-            {/* Доступное время */}
+            {/* Время начала */}
             <div>
               <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">
-                3. Доступное время {isLoading && <span className="text-[10px] lowercase opacity-50 ml-2">(обновление...)</span>}
+                3. Время начала {isLoading && <span className="text-[10px] lowercase opacity-50 ml-2">(обновление...)</span>}
               </span>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {allTimeSlots.map((time) => {
@@ -324,7 +377,10 @@ export default function BookingSection({
                       key={time}
                       type="button"
                       disabled={isTimeTaken}
-                      onClick={() => setSelectedTime(time)}
+                      onClick={() => {
+                        setSelectedTime(time);
+                        setDurationHours(1);
+                      }}
                       className={`py-3.5 rounded-xl border text-center font-mono text-sm font-semibold transition-all ${
                         isTimeTaken
                           ? "opacity-25 bg-red-500/10 border-transparent text-gray-500 line-through cursor-not-allowed"
@@ -338,6 +394,43 @@ export default function BookingSection({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Длительность визита (по 1 часу) */}
+            <div>
+              <span className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-3">
+                4. Сколько часов? <span className="text-[10px] lowercase opacity-50 ml-1">(вы сами решаете)</span>
+              </span>
+              {!selectedTime ? (
+                <p className="text-sm opacity-50">Сначала выберите время начала.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {durationOptions.map((h) => {
+                      const isSelected = durationHours === h;
+                      return (
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.98 }}
+                          key={h}
+                          type="button"
+                          onClick={() => setDurationHours(h)}
+                          className={`py-3.5 rounded-xl border text-center font-mono text-sm font-semibold transition-all ${
+                            isSelected
+                              ? (isDark ? "bg-pink-400 text-black border-pink-400" : "bg-slate-900 text-white border-slate-900")
+                              : (isDark ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-black/10 text-slate-800 hover:bg-black/5")
+                          }`}
+                        >
+                          {h} ч
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs opacity-50 mt-2">
+                    Визит: {selectedTime}–{endTime} · максимум подряд {maxDuration} ч
+                  </p>
+                </>
+              )}
             </div>
 
           </div>
@@ -370,23 +463,45 @@ export default function BookingSection({
                   <div className="flex justify-between items-baseline">
                     <span className="text-sm opacity-70">Время:</span>
                     <span className={`font-mono font-bold text-lg ${isDark ? "text-pink-400" : "text-purple-600"}`}>
-                      {selectedTime || "не выбрано"}
+                      {selectedTime ? `${selectedTime}–${endTime}` : "не выбрано"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm opacity-70">Длительность:</span>
+                    <span className="font-medium text-right">
+                      {selectedTime ? `${durationHours} ч` : "—"}
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold">Стоимость:</span>
-                    <span className="text-[11px] opacity-50">за 1 час работы, независимо от числа зон</span>
+                    <span className="text-sm font-bold">Итого:</span>
+                    <span className="text-[11px] opacity-50">{SESSION_PRICE} {CURRENCY}/час × {Math.max(1, durationHours)} ч, независимо от числа зон</span>
                   </div>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
-                    {totalPrice} {CURRENCY}<span className="text-sm font-normal opacity-60"> / час</span>
+                    {totalPrice} {CURRENCY}
                   </span>
                 </div>
               </div>
 
               <div className="mt-8 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-2">Ваше имя</label>
+                  <input
+                    type="text"
+                    placeholder="Как к вам обращаться"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={`w-full p-4 rounded-xl border text-sm ${
+                      isDark
+                        ? "bg-zinc-900 border-white/10 text-white focus:border-pink-400"
+                        : "bg-white border-black/10 text-slate-950 focus:border-slate-900"
+                    } outline-none transition-colors`}
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-2">Контактный телефон</label>
                   <input 
@@ -415,7 +530,7 @@ export default function BookingSection({
                       : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/10"
                   }`}
                 >
-                  {isSubmitting ? "Отправляем..." : "Подтвердить визит"}
+                  {isSubmitting ? "Отправляем..." : "Записаться"}
                 </motion.button>
               </div>
             </div>
