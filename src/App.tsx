@@ -52,14 +52,48 @@ function LandingPage() {
   const { content } = useContent();
 
   useEffect(() => {
-    const handleScroll = () => {
+    let rafId = 0;
+
+    const computeProgress = () => {
+      rafId = 0;
       const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (totalScroll > 0) {
-        setScrollProgress((window.scrollY / totalScroll) * 100);
+      // Пока страница короче вьюпорта (например, изображения галереи ещё не
+      // загрузились) — прогресс равен 0, иначе крошечная прокрутка ошибочно
+      // заполняла кольцо целиком.
+      if (totalScroll <= 0) {
+        setScrollProgress(0);
+        return;
       }
+      const pct = (window.scrollY / totalScroll) * 100;
+      // Жёстко держим значение в диапазоне 0–100.
+      setScrollProgress(Math.min(100, Math.max(0, pct)));
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // Троттлинг через requestAnimationFrame: не чаще одного пересчёта на кадр.
+    const schedule = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(computeProgress);
+    };
+
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    window.addEventListener("load", schedule);
+
+    // Пересчитываем прогресс, когда меняется высота документа (догрузка
+    // изображений, раскрытие FAQ и т.п.) — иначе кольцо рассинхронизируется.
+    const resizeObserver = new ResizeObserver(schedule);
+    resizeObserver.observe(document.body);
+
+    // Первичный расчёт после монтирования.
+    schedule();
+
+    return () => {
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("load", schedule);
+      resizeObserver.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // Сохраняем выбор темы и синхронизируем мета-тег theme-color.
