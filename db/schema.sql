@@ -79,7 +79,7 @@ INSERT INTO site_settings (key, value) VALUES
   ('master_name',      'Виктория'),
   ('master_experience','Более 7 лет опыта в электроэпиляции'),
   ('master_bio',       'Сертифицированный специалист по электроэпиляции. Индивидуальный подход, стерильные одноразовые инструменты и забота о каждом клиенте.'),
-  ('master_photo',     ''),
+  ('master_photo',     '/master.jpg'),
   ('master_certificates', '[]')
 ON CONFLICT (key) DO NOTHING;
 
