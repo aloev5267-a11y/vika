@@ -542,7 +542,13 @@ export default function BookingSection({
       {/* АНИМИРОВАННОЕ МОДАЛЬНОЕ ОКНО КАЛЕНДАРЯ */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            style={{
+              paddingTop: "calc(1rem + env(safe-area-inset-top))",
+              paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
+            }}
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -556,7 +562,7 @@ export default function BookingSection({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className={`relative w-full max-w-md p-6 rounded-[2.5rem] border shadow-2xl overflow-hidden ${
+              className={`relative w-full max-w-md my-auto max-h-full overflow-y-auto p-6 rounded-[2.5rem] border shadow-2xl ${
                 isDark ? "bg-[#121212] border-white/10 text-white" : "bg-white border-black/5 text-slate-950"
               }`}
             >

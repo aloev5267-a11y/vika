@@ -76,7 +76,7 @@ export default function Header({ isDark, toggleTheme, scrollProgress, scrollToSe
   );
 
   return (
-    <header className="fixed top-4 sm:top-6 inset-x-0 z-50 px-3 sm:px-4">
+    <header className="fixed top-4 sm:top-6 inset-x-0 z-50 px-3 sm:px-4 mt-safe">
       {/* ===== МОБИЛЬНАЯ ВЕРСИЯ: одна цельная панель ===== */}
       <div className={`lg:hidden max-w-[1280px] mx-auto ${cardBase} pl-5 pr-1.5 py-1.5 flex items-center justify-between gap-2`}>
         <button

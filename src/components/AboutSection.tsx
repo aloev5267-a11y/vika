@@ -60,10 +60,7 @@ export default function AboutSection({ isDark, settings }: AboutSectionProps) {
           <span className={`text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-pink-400' : 'text-purple-600'}`}>
             О мастере
           </span>
-          <h2 className="text-4xl font-bold mt-3 mb-4 text-balance">{settings.master_name}</h2>
-          <p className={`text-base font-medium mb-5 ${isDark ? 'text-pink-300' : 'text-purple-700'}`}>
-            {settings.master_experience}
-          </p>
+          <h2 className="text-4xl font-bold mt-3 mb-5 text-balance">{settings.master_name}</h2>
           <p className={`text-lg leading-relaxed mb-8 ${isDark ? 'text-white/70' : 'text-slate-600'}`}>
             {settings.master_bio}
           </p>

@@ -126,7 +126,7 @@ function LandingPage() {
   return (
     <>
       {showIntro && <IntroLoader onComplete={() => setShowIntro(false)} />}
-      <div className={`min-h-screen relative overflow-x-clip transition-colors duration-1000 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-[#fdf5f2] text-slate-900"}`}>
+      <div className={`min-h-dvh relative overflow-x-clip transition-colors duration-1000 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-[#fdf5f2] text-slate-900"}`}>
 
         {/* ГЛОБАЛЬНЫЙ ФОН */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
@@ -213,7 +213,8 @@ function LandingPage() {
               exit={{ opacity: 0, y: 20 }}
               role="status"
               aria-live="polite"
-              className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-6 rounded-3xl font-bold z-50 shadow-2xl ${
+              style={{ bottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+              className={`fixed left-1/2 -translate-x-1/2 max-w-[calc(100vw-2rem)] p-6 rounded-3xl font-bold z-50 shadow-2xl ${
                 notification.type === "error" ? "bg-red-500 text-white" : "bg-pink-400 text-black"
               }`}
             >
