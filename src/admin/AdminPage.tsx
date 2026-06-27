@@ -3,15 +3,17 @@ import type { SiteContent } from '../lib/content';
 import { DEFAULT_CONTENT } from '../lib/content';
 import { adminApi, clearToken, login, verify } from './adminApi';
 import LoginForm from './LoginForm';
+import BookingsManager from './BookingsManager';
 import GalleryManager from './GalleryManager';
 import TestimonialsManager from './TestimonialsManager';
 import AdvantagesManager from './AdvantagesManager';
 import SettingsManager from './SettingsManager';
 import TimeSlotsManager from './TimeSlotsManager';
 
-type Tab = 'gallery' | 'testimonials' | 'advantages' | 'slots' | 'settings';
+type Tab = 'bookings' | 'gallery' | 'testimonials' | 'advantages' | 'slots' | 'settings';
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'bookings', label: 'Записи клиентов' },
   { id: 'gallery', label: 'Галерея до/после' },
   { id: 'testimonials', label: 'Отзывы' },
   { id: 'advantages', label: 'Преимущества' },
@@ -23,7 +25,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
   const [loginError, setLoginError] = useState('');
-  const [tab, setTab] = useState<Tab>('gallery');
+  const [tab, setTab] = useState<Tab>('bookings');
 
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const [loading, setLoading] = useState(false);
@@ -131,6 +133,7 @@ export default function AdminPage() {
 
         {loading && <p className="text-sm text-slate-400 mb-4">Обновление данных…</p>}
 
+        {tab === 'bookings' && <BookingsManager onChange={notify} />}
         {tab === 'gallery' && <GalleryManager items={content.beforeAfter} onChange={afterChange} />}
         {tab === 'testimonials' && <TestimonialsManager items={content.testimonials} onChange={afterChange} />}
         {tab === 'advantages' && <AdvantagesManager items={content.advantages} onChange={afterChange} />}

@@ -73,7 +73,7 @@ export default function Hero({ isDark, scrollToBooking, beforeAfter }: Props) {
     <section id="hero-section" className="flex flex-col lg:flex-row items-center justify-between gap-12 mb-32 relative scroll-mt-28">
       <div className="flex-1 text-center lg:text-left z-10">
         <span className={`inline-block mb-5 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide ${isDark ? 'bg-pink-400/10 text-pink-300' : 'bg-purple-600/10 text-purple-700'}`}>
-          Электроэпиляция в Минске · 40 BYN
+          Электроэпиляция в Минске · 40 BYN / час
         </span>
         <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6 text-balance">
           Ваш путь к <br />

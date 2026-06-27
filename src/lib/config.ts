@@ -18,6 +18,9 @@ export const CURRENCY = 'BYN';
 /** Готовая строка цены, например "40 BYN". */
 export const PRICE_LABEL = `${SESSION_PRICE} ${CURRENCY}`;
 
+/** Строка цены с указанием единицы времени, например "40 BYN / час". */
+export const PRICE_PER_HOUR_LABEL = `${SESSION_PRICE} ${CURRENCY} / час`;
+
 /** ID счётчика Яндекс.Метрики. Должен совпадать со счётчиком в index.html. */
 export const YANDEX_METRIKA_ID = 110161298;
 
@@ -32,7 +35,6 @@ export const TIME_SLOTS: string[] = ['10:00', '12:00', '14:00', '16:00', '18:00'
  * что сохраняется в БД (bookings.service_id).
  */
 export const SERVICES: Service[] = [
-  { id: 'face', title: 'Лицо', desc: 'Удаление волос над губой, на подбородке и щеках.', price: PRICE_LABEL },
   { id: 'body', title: 'Тело', desc: 'Руки, ноги, спина. Полная гладкость навсегда.', price: PRICE_LABEL },
   { id: 'bikini', title: 'Бикини', desc: 'Деликатные зоны. Комфорт и гигиена.', price: PRICE_LABEL },
   { id: 'legs', title: 'Ноги полностью', desc: 'Безупречный результат для ваших ног.', price: PRICE_LABEL },

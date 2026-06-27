@@ -91,7 +91,27 @@ export const adminApi = {
   getTimeSlots: () => request<{ slots: { id: number; time: string }[] }>('/api/admin/time-slots'),
   createTimeSlot: (time: string) => request('/api/admin/time-slots', { method: 'POST', body: { time } }),
   deleteTimeSlot: (id: number) => request(`/api/admin/time-slots/${id}`, { method: 'DELETE' }),
+
+  getBookings: () => request<BookingsResponse>('/api/admin/bookings'),
+  deleteBooking: (id: number) => request(`/api/admin/bookings/${id}`, { method: 'DELETE' }),
 };
+
+export interface AdminBooking {
+  id: number;
+  serviceId: string;
+  serviceTitle: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  phone: string;
+  createdAt: string;
+  isPast: boolean;
+}
+
+export interface BookingsResponse {
+  bookings: AdminBooking[];
+  total: number;
+  upcoming: number;
+}
 
 /** Загрузка изображения. Возвращает { url }. */
 export async function uploadImage(file: File): Promise<string> {

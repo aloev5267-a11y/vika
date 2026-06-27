@@ -14,8 +14,19 @@
 }
 
 @layer base {
+  html,
+  body {
+    /* Жёстко исключаем горизонтальный скролл: декоративные блюр-пятна и
+       анимации не должны «растягивать» страницу вправо на мобильных. */
+    max-width: 100%;
+    overflow-x: clip;
+  }
   body {
     @apply font-sans antialiased selection:bg-brand-pink/30;
+  }
+  /* Любой потомок не может быть шире вьюпорта по горизонтали. */
+  #root {
+    overflow-x: clip;
   }
 }
 

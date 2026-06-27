@@ -240,7 +240,7 @@ export default function BookingSection({
                       }`}
                     >
                       {isSelected && <IconCheck className="w-4 h-4 shrink-0" />}
-                      {s.title} · {s.price}
+                      {s.title}
                     </button>
                   );
                 })}
@@ -367,11 +367,11 @@ export default function BookingSection({
 
                 <div className="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold">Итоговая сумма:</span>
-                    <span className="text-[11px] opacity-50">за сеанс (1 час), независимо от числа зон</span>
+                    <span className="text-sm font-bold">Стоимость:</span>
+                    <span className="text-[11px] opacity-50">за 1 час работы, независимо от числа зон</span>
                   </div>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
-                    {totalPrice} {CURRENCY}
+                    {totalPrice} {CURRENCY}<span className="text-sm font-normal opacity-60"> / час</span>
                   </span>
                 </div>
               </div>

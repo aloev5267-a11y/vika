@@ -15,7 +15,7 @@ import AdminPage from "./admin/AdminPage";
 import { services, timeSlots } from "./lib/data";
 import { PRICE_LABEL } from "./lib/config";
 import { useContent, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "./lib/content";
-import { IconInstagram } from "./components/icons";
+import { IconInstagram, IconMapPin } from "./components/icons";
 
 type Notification = { text: string; type: "success" | "error" };
 
@@ -92,7 +92,7 @@ function LandingPage() {
   return (
     <>
       {showIntro && <IntroLoader onComplete={() => setShowIntro(false)} />}
-      <div className={`min-h-screen relative transition-colors duration-1000 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-[#fdf5f2] text-slate-900"}`}>
+      <div className={`min-h-screen relative overflow-x-clip transition-colors duration-1000 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-[#fdf5f2] text-slate-900"}`}>
 
         {/* ГЛОБАЛЬНЫЙ ФОН */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
@@ -140,7 +140,7 @@ function LandingPage() {
         </main>
 
         {/* ФУТЕР */}
-        <footer className={`relative z-10 border-t py-8 px-6 flex flex-col items-center gap-3 text-center text-sm ${isDark ? "border-white/10 text-white/50" : "border-black/5 text-slate-500"}`}>
+        <footer className={`relative z-10 border-t py-10 px-6 flex flex-col items-center gap-4 text-center text-sm ${isDark ? "border-white/10 text-white/50" : "border-black/5 text-slate-500"}`}>
           <a
             href={INSTAGRAM_URL}
             target="_blank"
@@ -150,7 +150,24 @@ function LandingPage() {
             <IconInstagram className="w-4 h-4" />
             @{INSTAGRAM_HANDLE}
           </a>
-          <p>© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · Все зоны {PRICE_LABEL}</p>
+
+          {/* ГЕО-МЕТКА */}
+          <p className="inline-flex items-center gap-1.5 max-w-full">
+            <IconMapPin className="w-4 h-4 shrink-0" />
+            <span className="text-balance">{content.settings.address}</span>
+          </p>
+
+          <p className="text-balance">© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · {PRICE_LABEL} за час работы</p>
+
+          {/* КРЕДИТ РАЗРАБОТЧИКА */}
+          <a
+            href="https://netnext.site"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-xs transition-opacity hover:opacity-100 ${isDark ? "text-white/35 hover:text-white/70" : "text-slate-400 hover:text-slate-600"}`}
+          >
+            Дизайн и разработка — netnext.site
+          </a>
         </footer>
 
         {/* УВЕДОМЛЕНИЯ */}

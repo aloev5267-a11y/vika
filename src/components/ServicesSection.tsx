@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Service } from '../lib/data';
-import { IconArrowRight, IconFace, IconBody, IconBikini, IconLegs } from './icons';
+import { IconArrowRight, IconBody, IconBikini, IconLegs } from './icons';
 
 interface Props {
   isDark: boolean;
@@ -11,7 +11,6 @@ interface Props {
 
 // Иконка для каждой зоны по её id (с запасным вариантом).
 const serviceIcons: Record<string, (p: { className?: string }) => React.ReactElement> = {
-  face: IconFace,
   body: IconBody,
   bikini: IconBikini,
   legs: IconLegs,
@@ -20,7 +19,7 @@ const serviceIcons: Record<string, (p: { className?: string }) => React.ReactEle
 export default function ServicesSection({ isDark, services, scrollToBooking }: Props) {
   const [activeId, setActiveId] = useState(services[0]?.id);
   const active = services.find((s) => s.id === activeId) ?? services[0];
-  const ActiveIcon = serviceIcons[active.id] ?? IconFace;
+  const ActiveIcon = serviceIcons[active.id] ?? IconBody;
 
   const accent = isDark ? 'text-pink-400' : 'text-purple-600';
 
@@ -29,7 +28,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
       <div className="mb-8 sm:mb-12">
         <h2 className="text-3xl sm:text-4xl font-bold text-balance">Наши услуги</h2>
         <p className="text-sm opacity-60 mt-2 max-w-md text-pretty">
-          Выберите зону — стоимость сеанса фиксированная: 40 BYN за час работы, независимо от количества зон.
+          Оплата за время работы — 40 BYN за час, независимо от количества выбранных зон.
         </p>
       </div>
 
@@ -41,7 +40,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
           className="grid grid-cols-2 lg:flex lg:flex-col gap-2"
         >
           {services.map((s) => {
-            const Icon = serviceIcons[s.id] ?? IconFace;
+            const Icon = serviceIcons[s.id] ?? IconBody;
             const isActive = s.id === active.id;
             return (
               <button
@@ -118,7 +117,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
           <div className="relative z-10 mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-dashed border-current/10">
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-bold font-mono ${accent}`}>{active.price}</span>
-              <span className="text-sm opacity-50">/ сеанс</span>
+              <span className="text-sm opacity-50">/ час</span>
             </div>
             <button
               onClick={() => scrollToBooking(active.id)}

@@ -215,6 +215,68 @@ async function deleteTimeSlot(id: number) {
   return { success: true };
 }
 
+// ============================================================
+// АДМИН: ПРОСМОТР И УПРАВЛЕНИЕ ЗАПИСЯМИ КЛИЕНТОВ
+// ============================================================
+
+interface BookingRow {
+  id: number;
+  service_id: string;
+  booking_date: string;
+  booking_time: string;
+  phone: string;
+  created_at: string;
+}
+
+/** Преобразует "body, legs" → "Тело, Ноги полностью" (с запасом на неизвестные id). */
+function serviceIdsToTitles(serviceId: string): string {
+  return String(serviceId)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((id) => SERVICE_TITLES[id] ?? id)
+    .join(', ');
+}
+
+/** Список всех записей с разбивкой на предстоящие и прошедшие (по серверной дате). */
+async function listBookings() {
+  const res = await query(
+    `SELECT id,
+            service_id,
+            booking_date::text,
+            booking_time::text,
+            phone,
+            created_at::text
+       FROM bookings
+      ORDER BY booking_date DESC, booking_time DESC`
+  );
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const all = (res.rows as BookingRow[]).map((r) => ({
+    id: r.id,
+    serviceId: r.service_id,
+    serviceTitle: serviceIdsToTitles(r.service_id),
+    date: r.booking_date,
+    time: r.booking_time.substring(0, 5),
+    phone: r.phone,
+    createdAt: r.created_at,
+    isPast: r.booking_date < todayISO,
+  }));
+
+  return {
+    bookings: all,
+    total: all.length,
+    upcoming: all.filter((b) => !b.isPast).length,
+  };
+}
+
+/** Отмена/удаление записи администратором — освобождает слот. */
+async function deleteBooking(id: number) {
+  await query('DELETE FROM bookings WHERE id=$1', [id]);
+  return { success: true };
+}
+
 export async function handleCreateBooking(body: CreateBookingInput) {
   const { serviceId, bookingDate, bookingTime, phone } = body ?? ({} as CreateBookingInput);
   if (!serviceId || !bookingDate || !bookingTime || !phone) {
@@ -257,7 +319,7 @@ export async function handleCreateBooking(body: CreateBookingInput) {
     `✨ Услуги: ${serviceTitles}\n` +
     `📅 Дата: ${bookingDate}\n` +
     `⏰ Время: ${bookingTime}\n` +
-    `💰 Сумма: ${PRICE_LABEL}\n` +
+    `💰 Стоимость: ${PRICE_LABEL} за час работы\n` +
     `📱 Телефон: ${normalizedPhone}`;
   await sendTelegramNotification(text);
 
@@ -398,6 +460,11 @@ export async function dispatchApi(req: ApiRequest): Promise<unknown> {
 
     if (method === 'GET' && path === '/api/admin/content') return listAdminContent();
     if (method === 'PUT' && path === '/api/admin/settings') return updateSettings(body);
+
+    // Записи клиентов
+    if (method === 'GET' && path === '/api/admin/bookings') return listBookings();
+    const bookingMatch = path.match(/^\/api\/admin\/bookings\/(\d+)$/);
+    if (bookingMatch && method === 'DELETE') return deleteBooking(parseInt(bookingMatch[1], 10));
 
     // Управление слотами времени
     if (path === '/api/admin/time-slots') {
