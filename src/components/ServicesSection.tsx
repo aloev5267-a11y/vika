@@ -71,9 +71,9 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6 items-stretch">
         {/* СЕЛЕКТОР ЗОН */}
-        <div role="tablist" aria-label="Зоны услуг" className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-2">
+        <div role="tablist" aria-label="Зоны услуг" className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col lg:h-full gap-2 lg:gap-3">
           {services.map((s, i) => {
             const Icon = serviceIcons[s.id] ?? IconBody;
             const isActive = s.id === active.id;
@@ -83,7 +83,7 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveId(s.id)}
-                className={`group relative flex items-center gap-3 w-full rounded-2xl border px-4 py-3.5 text-left transition-all ${
+                className={`group relative flex items-center gap-3 w-full lg:flex-1 overflow-hidden rounded-2xl border px-4 py-3.5 lg:py-4 text-left transition-all duration-300 hover:-translate-y-0.5 ${
                   isActive
                     ? isDark
                       ? 'bg-pink-500/10 border-pink-400/60 shadow-[0_0_24px_rgba(244,143,177,0.14)]'
@@ -93,6 +93,17 @@ export default function ServicesSection({ isDark, services, scrollToBooking }: P
                       : 'bg-white/50 border-black/5 hover:bg-white/90 hover:border-black/10'
                 }`}
               >
+                {/* Активный индикатор-полоска слева */}
+                <span
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full transition-all duration-300 ${
+                    isActive
+                      ? isDark
+                        ? 'bg-pink-400 opacity-100'
+                        : 'bg-white opacity-100'
+                      : 'opacity-0'
+                  }`}
+                  aria-hidden="true"
+                />
                 <span
                   className={`flex items-center justify-center w-9 h-9 rounded-xl shrink-0 transition-colors ${
                     isActive
