@@ -1,16 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { IconCheck } from "./icons";
-
-// Фиксированная стоимость одного сеанса (оплата за час работы, а не за зону).
-const SESSION_PRICE = 40;
+import { SESSION_PRICE, CURRENCY, YANDEX_METRIKA_ID } from "../lib/config";
 
 interface BookingSectionProps {
   isDark: boolean;
   services: { id: string; title: string; price: string; desc?: string }[];
   timeSlots: string[];
-  selectedServiceId: string; // Оставляем для обратной совместимости
-  onServiceChange: (id: string) => void;
+  selectedServiceId: string; // Зона, выбранная в карточке услуг (предвыбор)
   onNotify: (text: string, type?: "success" | "error") => void;
 }
 
@@ -18,6 +15,7 @@ export default function BookingSection({
   isDark,
   services,
   timeSlots,
+  selectedServiceId,
   onNotify,
 }: BookingSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -26,8 +24,21 @@ export default function BookingSection({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Множественный выбор: храним массив ID выбранных услуг (по умолчанию выбрана первая)
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([services[0].id]);
+  // Множественный выбор: храним массив ID выбранных услуг.
+  // По умолчанию — зона, выбранная в карточке услуг (предвыбор), иначе первая услуга.
+  const initialServiceId =
+    selectedServiceId && services.some((s) => s.id === selectedServiceId)
+      ? selectedServiceId
+      : services[0].id;
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([initialServiceId]);
+
+  // Когда пользователь жмёт «Записаться» на конкретной зоне в карточке услуг,
+  // предвыбираем именно её в форме записи.
+  useEffect(() => {
+    if (selectedServiceId && services.some((s) => s.id === selectedServiceId)) {
+      setSelectedServiceIds([selectedServiceId]);
+    }
+  }, [selectedServiceId, services]);
 
   // Состояние для хранения реальных данных о бронированиях из PostgreSQL
   const [dbData, setDbData] = useState<{ fullyBookedDates: string[]; bookedSlotsByDate: Record<string, string[]>; allSlots?: string[] }>({
@@ -83,28 +94,34 @@ export default function BookingSection({
     }
   }, [selectedDate, activeBookedSlots]);
 
-  // Календарная логика: генерация первых 11 дней для быстрой сетки
-  const quickDays = useMemo(() => {
-    const dates = [];
-    for (let i = 0; i < 11; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
+  // Ключ текущего дня (YYYY-MM-DD): обновляется при смене суток, чтобы
+  // календарь не «застревал» на вчерашней дате, если вкладка открыта долго.
+  const todayKey = formatDateISO(new Date());
+
+  // Обновляем todayKey раз в минуту, чтобы перерисовать календарь после полуночи.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Генерация дней относительно сегодняшней даты (пересчитывается при смене суток).
+  const buildDays = (count: number) => {
+    const dates: Date[] = [];
+    const base = new Date();
+    for (let i = 0; i < count; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
       dates.push(d);
     }
     return dates;
-  }, []);
+  };
 
-  // Генерация дней для встроенного мини-календаря в модальном окне (ближайшие 60 дней)
-  const modalMonths = useMemo(() => {
-    const today = new Date();
-    const daysArray = [];
-    for (let i = 0; i < 60; i++) {
-      const d = new Date();
-      d.setDate(today.getDate() + i);
-      daysArray.push(d);
-    }
-    return daysArray;
-  }, []);
+  // Первые 11 дней для быстрой сетки.
+  const quickDays = useMemo(() => buildDays(11), [todayKey]);
+
+  // Ближайшие 60 дней для мини-календаря в модальном окне.
+  const modalMonths = useMemo(() => buildDays(60), [todayKey]);
 
   // Переключение выбора услуги (добавление / удаление из массива)
   const handleServiceToggle = (id: string) => {
@@ -144,12 +161,11 @@ export default function BookingSection({
     }
 
     const formattedDateISO = formatDateISO(selectedDate);
-    const zonesTitles = selectedServices.map((s) => s.title).join(", ");
-    const formattedDateText = selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    const message = `✨ Услуги: *${zonesTitles}*\n📅 Дата: *${formattedDateText}*\n⏰ Время: *${selectedTime}*\n💰 Итоговая сумма: *${totalPrice} BYN*\n📱 Телефон: \`${phone}\``;
 
     setIsSubmitting(true);
     try {
+      // Текст уведомления формирует сервер из проверенных полей —
+      // отправляем только сами данные записи.
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,7 +174,6 @@ export default function BookingSection({
           bookingDate: formattedDateISO,
           bookingTime: selectedTime,
           phone,
-          message,
         }),
       });
 
@@ -167,7 +182,7 @@ export default function BookingSection({
       if (res.ok) {
         // Отправляем цель в Яндекс.Метрику только после успешной записи
         if (typeof window !== "undefined" && typeof window.ym === "function") {
-          window.ym(110161298, "reachGoal", "booking");
+          window.ym(YANDEX_METRIKA_ID, "reachGoal", "booking");
         }
         await fetchSlots();
         setSelectedTime("");
@@ -356,7 +371,7 @@ export default function BookingSection({
                     <span className="text-[11px] opacity-50">за сеанс (1 час), независимо от числа зон</span>
                   </div>
                   <span className={`text-xl font-mono font-bold ${isDark ? "text-pink-400" : "text-purple-600"}`}>
-                    {totalPrice} BYN
+                    {totalPrice} {CURRENCY}
                   </span>
                 </div>
               </div>

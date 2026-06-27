@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.34.3",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
@@ -19,7 +20,7 @@
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.0.1",
     "pg": "^8.21.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",

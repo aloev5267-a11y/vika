@@ -3,25 +3,15 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
-import multer from 'multer';
 import { dispatchApi, ApiError, isAuthed } from './api-server.ts';
 import { optimizeUpload } from './optimize-upload.ts';
+import { ensureUploadsDir, createUploader, getBearerToken } from './upload-handler.ts';
 
-const uploadsDir = path.resolve(__dirname, 'uploads');
-fs.mkdirSync(uploadsDir, { recursive: true });
+const uploadsDir = ensureUploadsDir(__dirname);
+const upload = createUploader(uploadsDir);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext || '.jpg'}`);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: 8 * 1024 * 1024 } });
-
-function getToken(req: { headers: Record<string, any> }): string | undefined {
-  const h = req.headers['authorization'];
-  return typeof h === 'string' && h.startsWith('Bearer ') ? h.slice(7) : undefined;
+function getToken(req: { headers: Record<string, unknown> }): string | undefined {
+  return getBearerToken(req.headers);
 }
 
 export default defineConfig(() => {

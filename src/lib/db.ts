@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import type { PoolConfig } from 'pg';
 
 /**
  * Пул подключений к PostgreSQL.
@@ -11,13 +12,24 @@ import { Pool } from 'pg';
  *
  * Значения по умолчанию заданы только для хоста/порта/имени БД — пароль
  * обязателен и должен приходить из окружения.
+ *
+ * SSL:
+ *   - PGSSL=true            — включить SSL с проверкой сертификата (безопасно, по умолчанию для SSL).
+ *   - PGSSL_NO_VERIFY=true  — отключить проверку сертификата (ТОЛЬКО для self-signed/dev).
  */
+function buildSslConfig(): PoolConfig['ssl'] {
+  if (process.env.PGSSL !== 'true') return undefined;
+  // Проверку сертификата отключаем только при явном опасном флаге.
+  return process.env.PGSSL_NO_VERIFY === 'true' ? { rejectUnauthorized: false } : { rejectUnauthorized: true };
+}
+
+const ssl = buildSslConfig();
+
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
         connectionString: process.env.DATABASE_URL,
-        // Включите SSL, если ваша БД этого требует (управляется переменной окружения)
-        ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
+        ssl,
       }
     : {
         host: process.env.PGHOST || 'localhost',
@@ -25,7 +37,7 @@ const pool = new Pool(
         database: process.env.PGDATABASE || 'electroepil_db',
         user: process.env.PGUSER || 'postgres',
         password: process.env.PGPASSWORD,
-        ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
+        ssl,
       }
 );
 

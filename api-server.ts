@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import { query } from './src/lib/db';
+import { SERVICE_IDS, SERVICE_TITLES, PRICE_LABEL } from './src/lib/config';
 
 /**
  * Ошибка уровня API с HTTP-статусом.
@@ -19,7 +20,6 @@ export interface CreateBookingInput {
   bookingDate: string;
   bookingTime: string;
   phone: string;
-  message?: string;
 }
 
 // --- Валидация ---
@@ -32,7 +32,8 @@ function normalizePhone(raw: string): string {
   if (digits.length < 7 || digits.length > 15) {
     throw new ApiError(400, 'Укажите корректный номер телефона');
   }
-  return trimmed;
+  // Нормализуем к формату "+<цифры>": сохраняем ведущий + у международных номеров.
+  return trimmed.startsWith('+') ? `+${digits}` : digits;
 }
 
 // ============================================================
@@ -51,16 +52,48 @@ function pruneSessions() {
   }
 }
 
+// --- Защита от перебора пароля ---
+const LOGIN_WINDOW_MS = 1000 * 60 * 15; // окно 15 минут
+const LOGIN_MAX_ATTEMPTS = 5; // не более 5 неудачных попыток за окно
+const loginAttempts = { count: 0, windowStart: Date.now() };
+
+/** Сравнение строк за постоянное время — защита от тайминг-атак. */
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) {
+    // Всё равно делаем сравнение, чтобы не выдать различие по времени.
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export function login(password: string): { token: string } {
   const expected = process.env.ADMIN_PASSWORD;
   if (!expected) {
     throw new ApiError(500, 'ADMIN_PASSWORD не задан на сервере');
   }
-  if (!password || password !== expected) {
+
+  // Сбрасываем счётчик при наступлении нового окна.
+  const now = Date.now();
+  if (now - loginAttempts.windowStart > LOGIN_WINDOW_MS) {
+    loginAttempts.count = 0;
+    loginAttempts.windowStart = now;
+  }
+  if (loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+    throw new ApiError(429, 'Слишком много попыток входа. Попробуйте позже.');
+  }
+
+  if (!password || !safeEqual(password, expected)) {
+    loginAttempts.count += 1;
     throw new ApiError(401, 'Неверный пароль');
   }
+
+  // Успешный вход — сбрасываем счётчик попыток.
+  loginAttempts.count = 0;
   const token = crypto.randomUUID();
-  sessions.set(token, Date.now() + SESSION_TTL);
+  sessions.set(token, now + SESSION_TTL);
   return { token };
 }
 
@@ -101,7 +134,7 @@ export async function sendTelegramNotification(text: string): Promise<void> {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+      body: JSON.stringify({ chat_id: chatId, text }),
     });
     if (!res.ok) console.error('Telegram API ошибка:', res.status, await res.text());
   } catch (e) {
@@ -190,13 +223,24 @@ export async function handleCreateBooking(body: CreateBookingInput) {
   if (!DATE_RE.test(bookingDate)) throw new ApiError(400, 'Некорректный формат даты');
   if (!TIME_RE.test(bookingTime)) throw new ApiError(400, 'Некорректный формат времени');
 
+  // Валидируем услуги: принимаем список id через запятую и проверяем по справочнику.
+  const ids = String(serviceId)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ids.length === 0 || ids.some((id) => !SERVICE_IDS.has(id))) {
+    throw new ApiError(400, 'Указана недопустимая услуга');
+  }
+  const canonicalServiceId = ids.join(', ');
+  const serviceTitles = ids.map((id) => SERVICE_TITLES[id]).join(', ');
+
   const normalizedPhone = normalizePhone(phone);
 
   try {
     await query(
       `INSERT INTO bookings (service_id, booking_date, booking_time, phone)
        VALUES ($1, $2, $3, $4)`,
-      [String(serviceId), bookingDate, bookingTime, normalizedPhone]
+      [canonicalServiceId, bookingDate, bookingTime, normalizedPhone]
     );
   } catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
@@ -206,9 +250,15 @@ export async function handleCreateBooking(body: CreateBookingInput) {
     throw new ApiError(500, 'Ошибка базы данных');
   }
 
+  // Текст уведомления формируется ТОЛЬКО на сервере из проверенных полей —
+  // клиентский body.message намеренно игнорируется (защита от инъекций/спама).
   const text =
-    body.message ??
-    `🔔 Новая запись!\n📅 Дата: ${bookingDate}\n⏰ Время: ${bookingTime}\n📱 Телефон: ${normalizedPhone}`;
+    `🔔 Новая запись!\n` +
+    `✨ Услуги: ${serviceTitles}\n` +
+    `📅 Дата: ${bookingDate}\n` +
+    `⏰ Время: ${bookingTime}\n` +
+    `💰 Сумма: ${PRICE_LABEL}\n` +
+    `📱 Телефон: ${normalizedPhone}`;
   await sendTelegramNotification(text);
 
   return { success: true, message: 'Вы успешно записаны!' };

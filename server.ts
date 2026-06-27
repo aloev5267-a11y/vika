@@ -1,11 +1,10 @@
 import 'dotenv/config';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import multer from 'multer';
 import { dispatchApi, ApiError, isAuthed } from './api-server';
 import { optimizeUpload } from './optimize-upload';
+import { ensureUploadsDir, createUploader, getBearerToken } from './upload-handler';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,25 +15,11 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.use(express.json({ limit: '1mb' }));
 
 // --- Папка загрузок (фото до/после, фото мастера) ---
-const uploadsDir = path.join(__dirname, 'uploads');
-fs.mkdirSync(uploadsDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext || '.jpg'}`);
-  },
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8 МБ
-  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
-});
+const uploadsDir = ensureUploadsDir(__dirname);
+const upload = createUploader(uploadsDir);
 
 function getToken(req: express.Request): string | undefined {
-  const h = req.headers.authorization;
-  return h?.startsWith('Bearer ') ? h.slice(7) : undefined;
+  return getBearerToken(req.headers as Record<string, unknown>);
 }
 
 // --- Загрузка изображения (только для админа) ---

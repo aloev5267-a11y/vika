@@ -30,6 +30,8 @@ export default function SettingsManager({ settings, onChange }: Props) {
     try {
       await adminApi.updateSettings({ ...form, master_certificates: JSON.stringify(certs) });
       onChange('Настройки сохранены');
+    } catch (err) {
+      onChange(err instanceof Error ? `Ошибка: ${err.message}` : 'Не удалось сохранить настройки');
     } finally {
       setSaving(false);
     }

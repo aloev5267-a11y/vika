@@ -13,6 +13,7 @@ import TestimonialsSection from "./components/TestimonialsSection";
 import ContactSection from "./components/ContactSection";
 import AdminPage from "./admin/AdminPage";
 import { services, timeSlots } from "./lib/data";
+import { PRICE_LABEL } from "./lib/config";
 import { useContent, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "./lib/content";
 import { IconInstagram } from "./components/icons";
 
@@ -36,7 +37,14 @@ export default function App() {
 
 function LandingPage() {
   const [showIntro, setShowIntro] = useState(true);
-  const [isDark, setIsDark] = useState(true);
+  // Тема: сохранённый выбор пользователя имеет приоритет, иначе — системная.
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") return true;
+    if (saved === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
   const [notification, setNotification] = useState<Notification | null>(null);
   const [activeServiceId, setActiveServiceId] = useState(services[0].id);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -53,6 +61,17 @@ function LandingPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Сохраняем выбор темы и синхронизируем мета-тег theme-color.
+  useEffect(() => {
+    try {
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    } catch {
+      /* localStorage недоступен — игнорируем */
+    }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", isDark ? "#0a0a0a" : "#fdf5f2");
+  }, [isDark]);
 
   const toggleTheme = () => setIsDark((prev) => !prev);
 
@@ -105,7 +124,6 @@ function LandingPage() {
               services={services}
               timeSlots={timeSlots}
               selectedServiceId={activeServiceId}
-              onServiceChange={setActiveServiceId}
               onNotify={notify}
             />
           </div>
@@ -132,7 +150,7 @@ function LandingPage() {
             <IconInstagram className="w-4 h-4" />
             @{INSTAGRAM_HANDLE}
           </a>
-          <p>© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · Все зоны 40 BYN</p>
+          <p>© {new Date().getFullYear()} Виктория · Электроэпиляция в Минске · Все зоны {PRICE_LABEL}</p>
         </footer>
 
         {/* УВЕДОМЛЕНИЯ */}

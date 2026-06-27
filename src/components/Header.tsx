@@ -56,10 +56,6 @@ export default function Header({ isDark, toggleTheme, scrollProgress, scrollToSe
         className="absolute inset-0 -rotate-90 w-full h-full"
         viewBox="0 0 36 36"
         aria-hidden="true"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(scrollProgress)}
       >
         <circle cx="18" cy="18" r={radius} className={isDark ? 'stroke-white/10' : 'stroke-black/10'} strokeWidth="2.5" fill="transparent" />
         <motion.circle
